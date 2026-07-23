@@ -13,7 +13,10 @@ interface RepoState {
 }
 
 function sameIdentity(a: RepoConfig, b: RepoConfig): boolean {
-  return a.provider === b.provider && a.host === b.host && a.path === b.path;
+  if (a.provider !== b.provider || a.host !== b.host) return false;
+  // GitHub paths are case-insensitive; GitLab paths are case-sensitive.
+  if (a.provider === 'github') return a.path.toLowerCase() === b.path.toLowerCase();
+  return a.path === b.path;
 }
 
 export const useRepoStore = create<RepoState>()(
@@ -45,6 +48,9 @@ export const useRepoStore = create<RepoState>()(
     {
       name: 'rda-repos',
       partialize: (state) => ({ repos: state.repos, selectedRepoId: state.selectedRepoId }),
+      // Rehydration is triggered manually in a client effect (Task 20 calls
+      // useRepoStore.persist.rehydrate() in useEffect) to avoid SSR hydration mismatch.
+      skipHydration: true,
     },
   ),
 );

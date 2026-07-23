@@ -64,4 +64,26 @@ describe('repo-store', () => {
     const persisted = JSON.parse(localStorage.getItem('rda-repos') ?? '{}');
     expect(persisted.state.selectedRepoId).toBe('a');
   });
+
+  it('rehydrates repos and selection from a seeded persist envelope', async () => {
+    const seeded = repo('seeded');
+    // Reset first: setState persists, so seeding must come after or it gets overwritten.
+    useRepoStore.setState({ repos: [], selectedRepoId: null });
+    localStorage.setItem(
+      'rda-repos',
+      JSON.stringify({ state: { repos: [seeded], selectedRepoId: 'seeded' }, version: 0 }),
+    );
+
+    await useRepoStore.persist.rehydrate();
+
+    expect(useRepoStore.getState().repos).toEqual([seeded]);
+    expect(useRepoStore.getState().selectedRepoId).toBe('seeded');
+  });
+
+  it('dedupes GitHub paths case-insensitively', () => {
+    useRepoStore.getState().addRepo(repo('a', 'acme/web'));
+    const result = useRepoStore.getState().addRepo(repo('b', 'Acme/Web'));
+    expect(useRepoStore.getState().repos).toHaveLength(1);
+    expect(result).toBe('a');
+  });
 });

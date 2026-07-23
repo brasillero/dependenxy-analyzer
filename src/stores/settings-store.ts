@@ -19,6 +19,12 @@ export const useSettingsStore = create<SettingsState>()(
           },
         })),
     }),
-    { name: 'rda-settings' },
+    {
+      name: 'rda-settings',
+      version: 1,
+      // Rehydration is triggered manually in a client effect (Task 20 calls
+      // useSettingsStore.persist.rehydrate() in useEffect) to avoid SSR hydration mismatch.
+      skipHydration: true,
+    },
   ),
 );
