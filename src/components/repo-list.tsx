@@ -19,11 +19,21 @@ export function RepoList() {
       {repos.map((repo) => (
         <Card
           key={repo.id}
+          role="button"
+          tabIndex={0}
           className={cn(
             'cursor-pointer transition-colors',
             repo.id === selectedRepoId && 'border-primary ring-1 ring-primary',
           )}
           onClick={() => selectRepo(repo.id)}
+          onKeyDown={(event) => {
+            // Ignore keys bubbling from nested controls (e.g. the remove button).
+            if (event.target !== event.currentTarget) return;
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault(); // Space must not scroll the page (§5.5).
+              selectRepo(repo.id);
+            }
+          }}
         >
           <CardContent className="space-y-2 p-3">
             <div className="flex items-start justify-between gap-2">

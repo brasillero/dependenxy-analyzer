@@ -54,6 +54,22 @@ export function AddRepoForm() {
       return;
     }
 
+    // Dedupe before any network call — same provider+host+path rules as the store.
+    const existing = useRepoStore.getState().repos.find(
+      (r) =>
+        r.provider === draft.provider &&
+        r.host === draft.host &&
+        (draft.provider === 'github'
+          ? r.path.toLowerCase() === draft.path.toLowerCase()
+          : r.path === draft.path),
+    );
+    if (existing) {
+      selectRepo(existing.id);
+      setUrl('');
+      toast.info('Repository already added — selected it.');
+      return;
+    }
+
     setAdding(true);
     try {
       const client = createProxyClient(draft);

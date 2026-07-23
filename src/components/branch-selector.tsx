@@ -57,6 +57,13 @@ export function BranchSelector({ repo }: { repo: RepoConfig }) {
             {branch}
           </SelectItem>
         ))}
+        {/* Persisted branch deleted upstream: surface it (disabled) instead of a blank
+            trigger — never silently rewrite the persisted selection. */}
+        {repo.selectedBranch && !(branches ?? []).includes(repo.selectedBranch) && (
+          <SelectItem value={repo.selectedBranch} disabled>
+            {repo.selectedBranch} (not found)
+          </SelectItem>
+        )}
       </SelectContent>
     </Select>
   );
