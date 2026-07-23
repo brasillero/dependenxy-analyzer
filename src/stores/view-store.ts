@@ -1,10 +1,8 @@
 import { create } from 'zustand';
 import type { DependencyGroup } from '@/lib/types';
+import type { AnalysisFailure } from '@/lib/analyze';
 
-export interface AnalysisFailure {
-  repoName: string;
-  error: string;
-}
+export type { AnalysisFailure };
 
 interface ViewState {
   view: 'repo' | 'analysis';

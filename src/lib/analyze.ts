@@ -3,6 +3,7 @@ import type { DependencyGroup, RepoConfig } from './types';
 import { fetchPackageJsonFiles, type PackageFilesResult } from './package-files';
 import { flattenDependencies, groupDependencies, type RepoFiles } from './grouping';
 import { describeError } from './errors';
+import { effectiveBranch } from '@/hooks/use-package-json-files';
 import { useTokenStore } from '@/stores/token-store';
 
 export interface AnalysisFailure {
@@ -31,7 +32,7 @@ export async function runAnalysis(
   const perRepo: RepoFiles[] = [];
 
   for (const repo of repos) {
-    const branch = repo.selectedBranch ?? repo.defaultBranch;
+    const branch = effectiveBranch(repo);
     if (!branch) {
       failed.push({ repoName: repo.displayName, error: 'No branch selected.' });
       continue;

@@ -82,6 +82,16 @@ describe('runAnalysis', () => {
     expect(groups[0].depName).toBe('react');
   });
 
+  it('reports repos with no branch as failures without fetching', async () => {
+    fetchMock.mockResolvedValueOnce(files({ x: '^1.0.0' }));
+    const repos = [repo('nob', { defaultBranch: undefined }), repo('ok')];
+    const { groups, failed } = await runAnalysis(repos, freshQueryClient());
+    expect(failed).toEqual([{ repoName: 'acme/nob', error: expect.stringMatching(/branch/i) }]);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledWith(expect.objectContaining({ id: 'ok' }), 'main');
+    expect(groups.some((g) => g.depName === 'x')).toBe(true);
+  });
+
   it('reuses warm cache: second run does not refetch', async () => {
     const queryClient = freshQueryClient();
     fetchMock.mockResolvedValue(files({ x: '^1.0.0' }));
