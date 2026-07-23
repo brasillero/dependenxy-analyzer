@@ -39,6 +39,10 @@ describe('parseUrl', () => {
     expect(githubProvider.parseUrl('https://github.com/acme/web/tree/main').path).toBe('acme/web');
   });
 
+  it('strips .git even with a trailing slash', () => {
+    expect(githubProvider.parseUrl('https://github.com/acme/web.git/').path).toBe('acme/web');
+  });
+
   it('rejects non-GitHub and malformed URLs', () => {
     expect(() => githubProvider.parseUrl('https://gitlab.com/acme/web')).toThrow();
     expect(() => githubProvider.parseUrl('https://github.com/acme')).toThrow();

@@ -4,6 +4,7 @@ import { isExcludedPath, parsePackageJson } from '@/lib/package-json';
 
 const MAX_BRANCHES = 500;
 const MAX_PAGES = Math.ceil(MAX_BRANCHES / 100);
+const MAX_TREE_PAGES = 100;
 
 interface GitLabProjectPayload {
   default_branch: string;
@@ -29,9 +30,12 @@ export const gitlabProvider: GitProvider = {
     if (url.hostname === 'github.com') {
       throw new Error('Use the GitHub provider for github.com URLs.');
     }
-    let path = url.pathname.replace(/\.git$/, '');
-    // Strip /-/tree/<branch>/... or /tree/<branch>/... suffixes.
-    path = path.replace(/\/(-\/)?tree\/.*$/, '');
+    // Strip trailing slashes so a trailing-slash .git URL still parses.
+    let path = url.pathname.replace(/\/+$/, '').replace(/\.git$/, '');
+    // Cut everything from '/-/' onward (/-/tree, /-/blob, /-/merge_requests, ...).
+    path = path.split('/-/')[0];
+    // Strip legacy /tree/<branch>/... suffixes.
+    path = path.replace(/\/tree\/.*$/, '');
     const segments = path.split('/').filter(Boolean);
     if (segments.length < 2) {
       throw new Error('Expected a GitLab project path like group/project (subgroups allowed).');
@@ -64,13 +68,16 @@ export const gitlabProvider: GitProvider = {
     return names.slice(0, MAX_BRANCHES);
   },
 
-  /** Header-less single-page fallback; hooks use the paginated facade in providers/index.ts. */
+  /**
+   * GitLab trees paginate, so a header-less single page would silently
+   * truncate. Fail loudly instead — callers must use the paginated facade
+   * in providers/index.ts.
+   */
   async listPackageJsonPaths(client: ProxyClient, repo: RepoConfig, branch: string): Promise<string[]> {
-    const entries = await client.getJson<GitLabTreeEntry[]>(
-      `projects/${projectId(repo)}/repository/tree`,
-      { recursive: 'true', per_page: '100', ref: branch },
-    );
-    return filterPackageJsonPaths(entries);
+    void client;
+    void repo;
+    void branch;
+    throw new Error('Use the listPackageJsonPaths facade in providers/index.ts (paginated) for GitLab repos.');
   },
 
   async fetchPackageJson(
@@ -102,10 +109,10 @@ export async function listPackageJsonPathsPaginated(
 ): Promise<string[]> {
   const entries: GitLabTreeEntry[] = [];
   let searchParams: Record<string, string> = { recursive: 'true', per_page: '100', ref: branch };
-  // Defensive cap of 100 pages (10,000 tree entries): guards against an
-  // infinite loop on a misbehaving upstream that keeps echoing a non-empty
+  // Defensive cap (MAX_TREE_PAGES × 100 = 10,000 tree entries): guards against
+  // an infinite loop on a misbehaving upstream that keeps echoing a non-empty
   // x-next-page, without realistically truncating monorepos.
-  for (let page = 0; page < 100; page++) {
+  for (let page = 0; page < MAX_TREE_PAGES; page++) {
     const response = await pagedGet<GitLabTreeEntry[]>(
       `projects/${projectId(repo)}/repository/tree`,
       searchParams,

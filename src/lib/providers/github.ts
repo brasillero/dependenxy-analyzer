@@ -40,7 +40,12 @@ export const githubProvider: GitProvider = {
     if (url.hostname !== 'github.com') {
       throw new Error('Not a GitHub URL.');
     }
-    const segments = url.pathname.replace(/\.git$/, '').split('/').filter(Boolean);
+    // Strip trailing slashes so a trailing-slash .git URL still parses.
+    const segments = url.pathname
+      .replace(/\/+$/, '')
+      .replace(/\.git$/, '')
+      .split('/')
+      .filter(Boolean);
     // Drop /tree/<branch>/... suffixes.
     const treeIndex = segments.indexOf('tree');
     const pathSegments = treeIndex === -1 ? segments : segments.slice(0, treeIndex);

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { gitlabProvider } from './gitlab';
+import { gitlabProvider, listPackageJsonPathsPaginated } from './gitlab';
 import type { PagedGet, ProxyClient } from './provider';
 import type { RepoConfig } from '@/lib/types';
 
@@ -52,6 +52,18 @@ describe('parseUrl', () => {
     );
   });
 
+  it('strips everything from /-/ onward (blob, merge_requests, ...)', () => {
+    expect(
+      gitlabProvider.parseUrl('https://gitlab.com/group/proj/-/blob/main/README.md').path,
+    ).toBe('group/proj');
+  });
+
+  it('strips .git even with a trailing slash', () => {
+    expect(gitlabProvider.parseUrl('https://gitlab.com/group/project.git/').path).toBe(
+      'group/project',
+    );
+  });
+
   it('rejects GitHub URLs and single-segment paths', () => {
     expect(() => gitlabProvider.parseUrl('https://github.com/a/b')).toThrow();
     expect(() => gitlabProvider.parseUrl('https://gitlab.com/onlygroup')).toThrow();
@@ -66,17 +78,37 @@ describe('getDefaultBranch', () => {
 });
 
 describe('listPackageJsonPaths', () => {
-  it('filters blobs named package.json with exclusion segments', async () => {
-    const client = clientWith({
-      'projects/group%2Fsub%2Fproject/repository/tree': [
-        { type: 'blob', path: 'package.json' },
-        { type: 'blob', path: 'packages/api/package.json' },
-        { type: 'blob', path: 'packages/api/coverage/package.json' },
-        { type: 'tree', path: 'packages' },
-      ],
-    });
-    const paths = await gitlabProvider.listPackageJsonPaths(client, repo, 'main');
-    expect(paths).toEqual(['package.json', 'packages/api/package.json']);
+  it('throws — a single page would silently truncate; use the paginated facade', async () => {
+    const client = clientWith({});
+    await expect(gitlabProvider.listPackageJsonPaths(client, repo, 'main')).rejects.toThrow(
+      'Use the listPackageJsonPaths facade in providers/index.ts (paginated) for GitLab repos.',
+    );
+  });
+});
+
+describe('listPackageJsonPathsPaginated', () => {
+  it('follows x-next-page until empty and filters exclusions', async () => {
+    const pagedGet = vi
+      .fn()
+      .mockResolvedValueOnce({
+        data: [
+          { type: 'blob', path: 'package.json' },
+          { type: 'blob', path: 'packages/api/package.json' },
+          { type: 'blob', path: 'packages/api/coverage/package.json' },
+        ],
+        headers: new Headers({ 'x-next-page': '2' }),
+      })
+      .mockResolvedValueOnce({
+        data: [{ type: 'blob', path: 'packages/web/package.json' }],
+        headers: new Headers({ 'x-next-page': '' }),
+      });
+    const paths = await listPackageJsonPathsPaginated(pagedGet, repo, 'main');
+    expect(paths).toEqual([
+      'package.json',
+      'packages/api/package.json',
+      'packages/web/package.json',
+    ]);
+    expect(pagedGet).toHaveBeenCalledTimes(2);
   });
 });
 
@@ -96,6 +128,26 @@ describe('fetchPackageJson', () => {
     const file = await gitlabProvider.fetchPackageJson(client, repo, 'main', 'package.json');
     expect(file.packageName).toBe('api');
     expect(file.deps.devDependencies).toEqual({ vitest: '^2.0.0' });
+  });
+
+  it('encodes a nested file path as a single segment', async () => {
+    const raw = JSON.stringify({ name: 'api' });
+    const client: ProxyClient = {
+      getJson: vi.fn(),
+      getText: vi.fn(async (path: string) => {
+        expect(path).toBe(
+          'projects/group%2Fsub%2Fproject/repository/files/packages%2Fapi%2Fpackage.json/raw',
+        );
+        return raw;
+      }),
+    };
+    const file = await gitlabProvider.fetchPackageJson(
+      client,
+      repo,
+      'main',
+      'packages/api/package.json',
+    );
+    expect(file.packageName).toBe('api');
   });
 });
 
