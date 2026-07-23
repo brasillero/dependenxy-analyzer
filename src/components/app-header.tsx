@@ -25,6 +25,8 @@ export function AppHeader() {
       if (failed.length === repos.length) {
         toast.error('No repository could be analyzed.');
       }
+    } catch {
+      toast.error('Analysis failed unexpectedly.');
     } finally {
       setAnalyzing(false);
     }
