@@ -49,6 +49,23 @@ export function validateGitLabHost(raw: string): HostValidation {
     return { ok: false, reason: 'IPv4-mapped IPv6 addresses are not allowed' };
   }
 
+  // Other IPv6 forms that must never be reachable through the proxy.
+  // Hostnames arrive bracketed, lowercased, and in compressed form.
+  if (hostname === '[::]') {
+    return { ok: false, reason: 'unspecified IPv6 address is not allowed' };
+  }
+  if (/^\[f[cd][0-9a-f]{2}:/.test(hostname)) {
+    return { ok: false, reason: 'IPv6 unique-local addresses (fc00::/7) are not allowed' };
+  }
+  if (/^\[fe[89ab][0-9a-f]:/.test(hostname)) {
+    return { ok: false, reason: 'IPv6 link-local addresses (fe80::/10) are not allowed' };
+  }
+  if (hostname.startsWith('[64:ff9b::')) {
+    // NAT64 well-known prefix embeds an IPv4 address — same bypass class as
+    // IPv4-mapped IPv6 above.
+    return { ok: false, reason: 'NAT64-embedded IPv4 addresses are not allowed' };
+  }
+
   if (PRIVATE_IPV4_PATTERNS.some((pattern) => pattern.test(hostname))) {
     return { ok: false, reason: 'private/reserved IP ranges are not allowed' };
   }

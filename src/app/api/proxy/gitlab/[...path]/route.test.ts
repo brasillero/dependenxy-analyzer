@@ -91,4 +91,19 @@ describe('gitlab proxy route', () => {
     expect((await res.json()).message).toBeTruthy();
     expect(res.headers.get('cache-control')).toBe('no-store');
   });
+
+  it('strips redirect-pivot headers (location, set-cookie) from upstream responses', async () => {
+    fetchMock.mockResolvedValue(
+      new Response('', {
+        status: 302,
+        headers: { location: 'http://169.254.169.254/', 'set-cookie': 'x=y' },
+      }),
+    );
+    const res = await GET(req('/api/proxy/gitlab/p', { 'x-access-token': 't' }), params(['p']));
+    // The 302 status passes through, but the whitelist must strip the headers
+    // that would let a validated host pivot the browser to an internal address.
+    expect(res.status).toBe(302);
+    expect(res.headers.get('location')).toBeNull();
+    expect(res.headers.get('set-cookie')).toBeNull();
+  });
 });

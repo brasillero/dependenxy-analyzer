@@ -56,6 +56,13 @@ describe('validateGitLabHost', () => {
     expect(validateGitLabHost('http://[::ffff:169.254.169.254]').ok).toBe(false);
   });
 
+  it('rejects IPv6 unique-local, link-local, unspecified, and NAT64 addresses', () => {
+    expect(validateGitLabHost('http://[fd12:3456::1]').ok).toBe(false); // ULA fc00::/7
+    expect(validateGitLabHost('http://[fe80::1]').ok).toBe(false); // link-local fe80::/10
+    expect(validateGitLabHost('http://[::]').ok).toBe(false); // unspecified
+    expect(validateGitLabHost('http://[64:ff9b::7f00:1]').ok).toBe(false); // NAT64-embedded IPv4
+  });
+
   it('rejects IPv4 addresses in non-standard notations', () => {
     // WHATWG URL parsing normalizes all of these to 127.0.0.1 or 169.254.169.254.
     expect(validateGitLabHost('http://0x7f.0.0.1').ok).toBe(false);

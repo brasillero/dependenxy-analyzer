@@ -42,6 +42,8 @@ export async function GET(
   const headers: Record<string, string> = {};
   const token = req.headers.get('x-access-token');
   if (token) {
+    // http:// hosts are accepted by design (self-hosted LAN instances) — in
+    // that case the token crosses the wire unencrypted.
     headers['PRIVATE-TOKEN'] = token;
   }
 
@@ -53,6 +55,9 @@ export async function GET(
       // Host is client-controlled: never follow redirects, or a validated host
       // could 302 into the internal network and bypass the SSRF guard.
       redirect: 'manual',
+      // A hung or dribbling upstream must not hold the route open forever.
+      // The timeout aborts the fetch, which throws and lands in the 502 below.
+      signal: AbortSignal.timeout(30_000),
     });
   } catch {
     return NextResponse.json(
