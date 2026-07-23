@@ -1,6 +1,6 @@
 import ky, { HTTPError } from 'ky';
 import type { RepoConfig } from '@/lib/types';
-import type { ProxyClient } from '@/lib/providers/provider';
+import type { ProxyClient, PagedResponse } from '@/lib/providers/provider';
 import type { StatusError } from '@/lib/errors';
 import { useTokenStore } from '@/stores/token-store';
 
@@ -89,10 +89,7 @@ export function createProxyClient(repo: RepoConfig): ProxyClient {
   };
 }
 
-export interface PagedResponse<T> {
-  data: T;
-  headers: Headers;
-}
+export type { PagedResponse, PagedGet } from '@/lib/providers/provider';
 
 /** GET JSON and expose upstream response headers (needed for Link / x-next-page pagination). */
 export async function getJsonWithHeaders<T>(
