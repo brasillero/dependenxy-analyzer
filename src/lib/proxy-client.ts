@@ -50,8 +50,11 @@ async function toStatusError<T>(promise: Promise<T>): Promise<T> {
   } catch (error) {
     if (error instanceof HTTPError) {
       // Keep the upstream body in the message: describeError detects 403 rate
-      // limits (GitHub's primary rate-limit shape) via the body text.
-      const body = await error.response.text().catch(() => '');
+      // limits (GitHub's primary rate-limit shape) via the body text. ky v2
+      // consumes the response body itself, so use its pre-parsed error.data
+      // (object for JSON bodies, string otherwise) — response.text() is dead.
+      const body =
+        typeof error.data === 'string' ? error.data : error.data ? JSON.stringify(error.data) : '';
       const statusError = new Error(
         `Request failed with status ${error.response.status}${body ? `: ${body}` : ''}`,
       ) as StatusError;
