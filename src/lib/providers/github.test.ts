@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { githubProvider } from './github';
-import type { ProxyClient } from './provider';
+import type { PagedGet, ProxyClient } from './provider';
 import type { RepoConfig } from '@/lib/types';
 
 const repo: RepoConfig = {
@@ -118,5 +118,17 @@ describe('listBranches', () => {
     expect(names[0]).toBe('b0');
     expect(names.at(-1)).toBe('c2');
     expect(pagedGet).toHaveBeenCalledTimes(2);
+  });
+
+  it('stops at the 500-branch / 5-page ceiling when next links never exhaust', async () => {
+    const page = Array.from({ length: 100 }, (_, i) => ({ name: `b${i}` }));
+    // Self-referential next link: pagination never terminates on its own.
+    const headers = new Headers({
+      link: '<https://api.github.com/repos/acme/web/branches?per_page=100&page=2>; rel="next"',
+    });
+    const pagedGet = vi.fn(async () => ({ data: page, headers })) as PagedGet;
+    const names = await githubProvider.listBranches(pagedGet, repo);
+    expect(names).toHaveLength(500);
+    expect(pagedGet).toHaveBeenCalledTimes(5);
   });
 });

@@ -3,6 +3,7 @@ import type { GitProvider, PagedGet, ParsedRepoUrl, ProxyClient } from './provid
 import { decodeBase64Utf8, isExcludedPath, parsePackageJson } from '@/lib/package-json';
 
 const MAX_BRANCHES = 500;
+const MAX_PAGES = Math.ceil(MAX_BRANCHES / 100);
 
 interface GitHubRepoPayload {
   default_branch: string;
@@ -59,10 +60,13 @@ export const githubProvider: GitProvider = {
     const names: string[] = [];
     let path: string | null = `repos/${repo.path}/branches`;
     let searchParams: Record<string, string> | undefined = { per_page: '100' };
-    while (path && names.length < MAX_BRANCHES) {
-      const page = await pagedGet<Array<{ name: string }>>(path, searchParams);
-      names.push(...page.data.map((b) => b.name));
-      const next = nextLinkUrl(page.headers.get('link'));
+    // The page cap also guards against a misbehaving upstream that keeps
+    // echoing a rel="next" Link with an empty body — names.length alone
+    // would never reach MAX_BRANCHES and the loop would spin forever.
+    for (let page = 0; page < MAX_PAGES && path; page++) {
+      const response = await pagedGet<Array<{ name: string }>>(path, searchParams);
+      names.push(...response.data.map((b) => b.name));
+      const next = nextLinkUrl(response.headers.get('link'));
       if (!next) break;
       // Subsequent pages: the next URL is absolute (api.github.com); reduce it
       // to a proxy-relative path and re-extract the query for ky.
