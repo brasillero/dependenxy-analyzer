@@ -17,8 +17,16 @@ const kyInstance = ky.create({
   hooks: {
     beforeRequest: [
       ({ request }) => {
-        // The route segment after /api/proxy determines the provider.
-        const provider = request.url.includes('/api/proxy/github/') ? 'github' : 'gitlab';
+        // The route segment after /api/proxy determines the provider. Requests
+        // outside our proxy routes get no token attached at all.
+        const provider = request.url.includes('/api/proxy/github/')
+          ? 'github'
+          : request.url.includes('/api/proxy/gitlab/')
+            ? 'gitlab'
+            : null;
+        if (provider === null) {
+          return;
+        }
         // x-gitlab-host carries a full URL (the SSRF guard parses it with new URL);
         // the token store is keyed by bare host.
         let host = 'github.com';
@@ -41,7 +49,12 @@ async function toStatusError<T>(promise: Promise<T>): Promise<T> {
     return await promise;
   } catch (error) {
     if (error instanceof HTTPError) {
-      const statusError = new Error(`Request failed with status ${error.response.status}`) as StatusError;
+      // Keep the upstream body in the message: describeError detects 403 rate
+      // limits (GitHub's primary rate-limit shape) via the body text.
+      const body = await error.response.text().catch(() => '');
+      const statusError = new Error(
+        `Request failed with status ${error.response.status}${body ? `: ${body}` : ''}`,
+      ) as StatusError;
       statusError.status = error.response.status;
       throw statusError;
     }
