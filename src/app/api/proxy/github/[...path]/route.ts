@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const UPSTREAM_BASE = 'https://api.github.com';
 
-/** Response headers worth forwarding to the browser (pagination + content type). */
-const FORWARD_HEADERS = ['content-type', 'link', 'x-ratelimit-remaining', 'x-ratelimit-reset'];
+/** Response headers worth forwarding to the browser (pagination + rate limits). */
+const FORWARD_HEADERS = ['content-type', 'link', 'x-ratelimit-remaining', 'x-ratelimit-reset', 'retry-after'];
 
 export async function GET(
   req: NextRequest,
@@ -22,7 +22,18 @@ export async function GET(
     headers.Authorization = `Bearer ${token}`;
   }
 
-  const upstream = await fetch(upstreamUrl, { headers, cache: 'no-store' });
+  // redirect: 'follow' is deliberate here — the host is fixed and undici strips
+  // Authorization on cross-origin redirects. The GitLab route uses 'manual'
+  // instead because its host is client-controlled.
+  let upstream: Response;
+  try {
+    upstream = await fetch(upstreamUrl, { headers, cache: 'no-store', redirect: 'follow' });
+  } catch {
+    return NextResponse.json(
+      { message: 'Upstream request failed — host unreachable or network error.' },
+      { status: 502, headers: { 'cache-control': 'no-store' } },
+    );
+  }
 
   const responseHeaders = new Headers();
   for (const name of FORWARD_HEADERS) {

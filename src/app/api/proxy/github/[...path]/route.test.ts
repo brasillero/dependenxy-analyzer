@@ -56,4 +56,26 @@ describe('github proxy route', () => {
     const res = await GET(req('/api/proxy/github/repos/a/b/branches'), params(['repos', 'a', 'b', 'branches']));
     expect(res.headers.get('link')).toContain('rel="next"');
   });
+
+  it('forwards rate-limit headers (x-ratelimit-remaining, retry-after) when present', async () => {
+    fetchMock.mockResolvedValue(
+      new Response('{"message":"API rate limit exceeded"}', {
+        status: 429,
+        headers: { 'x-ratelimit-remaining': '0', 'retry-after': '60' },
+      }),
+    );
+    const res = await GET(req('/api/proxy/github/repos/a/b'), params(['repos', 'a', 'b']));
+    expect(res.status).toBe(429);
+    expect(res.headers.get('x-ratelimit-remaining')).toBe('0');
+    expect(res.headers.get('retry-after')).toBe('60');
+  });
+
+  it('returns 502 json when the upstream fetch throws', async () => {
+    fetchMock.mockRejectedValue(new TypeError('fetch failed'));
+    const res = await GET(req('/api/proxy/github/repos/a/b'), params(['repos', 'a', 'b']));
+    expect(res.status).toBe(502);
+    expect(res.headers.get('cache-control')).toBe('no-store');
+    const body = await res.json();
+    expect(body.message).toBeTruthy();
+  });
 });
