@@ -44,4 +44,24 @@ describe('validateGitLabHost', () => {
     expect(validateGitLabHost('not a url').ok).toBe(false);
     expect(validateGitLabHost('').ok).toBe(false);
   });
+
+  it('rejects trailing-dot localhost', () => {
+    expect(validateGitLabHost('http://localhost.').ok).toBe(false);
+    expect(validateGitLabHost('http://x.localhost.').ok).toBe(false);
+  });
+
+  it('rejects IPv4-mapped IPv6 addresses', () => {
+    expect(validateGitLabHost('http://[::ffff:127.0.0.1]').ok).toBe(false);
+    expect(validateGitLabHost('http://[::ffff:7f00:1]').ok).toBe(false);
+    expect(validateGitLabHost('http://[::ffff:169.254.169.254]').ok).toBe(false);
+  });
+
+  it('rejects IPv4 addresses in non-standard notations', () => {
+    // WHATWG URL parsing normalizes all of these to 127.0.0.1 or 169.254.169.254.
+    expect(validateGitLabHost('http://0x7f.0.0.1').ok).toBe(false);
+    expect(validateGitLabHost('http://0177.0.0.1').ok).toBe(false);
+    expect(validateGitLabHost('http://2130706433').ok).toBe(false);
+    expect(validateGitLabHost('http://127.1').ok).toBe(false);
+    expect(validateGitLabHost('http://0xA9FEA9FE').ok).toBe(false);
+  });
 });

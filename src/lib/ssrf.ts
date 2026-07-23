@@ -30,7 +30,9 @@ export function validateGitLabHost(raw: string): HostValidation {
     return { ok: false, reason: 'credentials in URL are not allowed' };
   }
 
-  const hostname = url.hostname.toLowerCase();
+  // Strip trailing dots: 'localhost.' resolves to loopback via DNS but would
+  // otherwise pass the hostname checks below. Bracketed IPv6 contains no dots.
+  const hostname = url.hostname.toLowerCase().replace(/\.+$/, '');
 
   if (hostname === 'localhost' || hostname.endsWith('.localhost')) {
     return { ok: false, reason: 'localhost is not allowed' };
@@ -38,6 +40,13 @@ export function validateGitLabHost(raw: string): HostValidation {
 
   if (hostname === '[::1]' || hostname === '::1') {
     return { ok: false, reason: 'loopback address is not allowed' };
+  }
+
+  // IPv4-mapped IPv6 ([::ffff:127.0.0.1], or hex-quad form [::ffff:7f00:1]
+  // after URL normalization) is an in-scope IPv4 rejection wearing IPv6
+  // syntax. A legit GitLab host would never be addressed this way — reject outright.
+  if (hostname.startsWith('[::ffff:')) {
+    return { ok: false, reason: 'IPv4-mapped IPv6 addresses are not allowed' };
   }
 
   if (PRIVATE_IPV4_PATTERNS.some((pattern) => pattern.test(hostname))) {
