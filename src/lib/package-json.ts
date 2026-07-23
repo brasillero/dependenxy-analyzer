@@ -18,6 +18,18 @@ export function isExcludedPath(path: string): boolean {
 }
 
 /**
+ * Coerce an unknown dep block into Record<string, string>: non-plain objects
+ * (strings, arrays, null) become {}, and non-string values are dropped so
+ * malformed content never silently corrupts downstream analysis.
+ */
+function sanitizeDeps(block: unknown): Record<string, string> {
+  if (typeof block !== 'object' || block === null || Array.isArray(block)) return {};
+  return Object.fromEntries(
+    Object.entries(block).filter(([, value]) => typeof value === 'string'),
+  ) as Record<string, string>;
+}
+
+/**
  * Parse raw package.json content into a PackageJsonFile with all three dep
  * blocks guaranteed present. Throws on malformed JSON — callers must isolate
  * per-file failures (a bad file never aborts the batch).
@@ -25,17 +37,17 @@ export function isExcludedPath(path: string): boolean {
 export function parsePackageJson(path: string, content: string): PackageJsonFile {
   const json = JSON.parse(content) as {
     name?: unknown;
-    dependencies?: Record<string, string>;
-    devDependencies?: Record<string, string>;
-    peerDependencies?: Record<string, string>;
+    dependencies?: unknown;
+    devDependencies?: unknown;
+    peerDependencies?: unknown;
   };
   return {
     path,
     packageName: typeof json.name === 'string' && json.name.length > 0 ? json.name : path,
     deps: {
-      dependencies: json.dependencies ?? {},
-      devDependencies: json.devDependencies ?? {},
-      peerDependencies: json.peerDependencies ?? {},
+      dependencies: sanitizeDeps(json.dependencies),
+      devDependencies: sanitizeDeps(json.devDependencies),
+      peerDependencies: sanitizeDeps(json.peerDependencies),
     },
   };
 }

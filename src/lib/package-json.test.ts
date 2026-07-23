@@ -59,6 +59,24 @@ describe('parsePackageJson', () => {
   it('throws on malformed JSON (caller isolates the failure)', () => {
     expect(() => parsePackageJson('bad/package.json', '{not json')).toThrow();
   });
+
+  it('sanitizes a dep block that is a string instead of an object', () => {
+    const file = parsePackageJson('x/package.json', '{"dependencies": "oops"}');
+    expect(file.deps.dependencies).toEqual({});
+  });
+
+  it('sanitizes a dep block that is an array instead of an object', () => {
+    const file = parsePackageJson('x/package.json', '{"devDependencies": ["react"]}');
+    expect(file.deps.devDependencies).toEqual({});
+  });
+
+  it('drops entries whose values are not strings', () => {
+    const file = parsePackageJson(
+      'x/package.json',
+      '{"dependencies": {"react": "^18.2.0", "weird": 18}}',
+    );
+    expect(file.deps.dependencies).toEqual({ react: '^18.2.0' });
+  });
 });
 
 describe('decodeBase64Utf8', () => {
