@@ -49,10 +49,18 @@ describe('TokenDialog', () => {
     expect(useTokenStore.getState().githubToken).toBe('ghp_secret');
   });
 
+  it('writes a gitlab host token into the memory store', async () => {
+    const user = await openDialog();
+    await user.type(screen.getByLabelText(/gitlab\.com/i), 'glpat_secret');
+    expect(useTokenStore.getState().gitlabTokens['gitlab.com']).toBe('glpat_secret');
+  });
+
   it('clear all empties every token', async () => {
     useTokenStore.getState().setGithubToken('x');
+    useTokenStore.getState().setGitlabToken('gitlab.com', 'y');
     const user = await openDialog();
     await user.click(screen.getByRole('button', { name: /clear all/i }));
     expect(useTokenStore.getState().githubToken).toBe('');
+    expect(useTokenStore.getState().gitlabTokens).toEqual({});
   });
 });

@@ -52,6 +52,9 @@ export function TokenDialog() {
             <Input
               id="token-github"
               type="password"
+              autoComplete="new-password"
+              data-1p-ignore
+              data-lpignore="true"
               placeholder="ghp_…"
               value={githubToken}
               onChange={(e) => setGithubToken(e.target.value)}
@@ -65,6 +68,9 @@ export function TokenDialog() {
               <Input
                 id={`token-gitlab-${host}`}
                 type="password"
+                autoComplete="new-password"
+                data-1p-ignore
+                data-lpignore="true"
                 placeholder="glpat-…"
                 value={gitlabTokens[host] ?? ''}
                 onChange={(e) => setGitlabToken(host, e.target.value)}
