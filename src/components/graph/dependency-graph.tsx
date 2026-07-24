@@ -1,18 +1,29 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { Background, Controls, ReactFlow, type Edge, type Node } from '@xyflow/react';
+import { useCallback, useMemo, useState } from 'react';
+import {
+  Background,
+  Controls,
+  ReactFlow,
+  type Edge,
+  type Node,
+  type NodeChange,
+  type NodeMouseHandler,
+} from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   buildGraphData,
   filterSharedOnly,
   type PackageNodeData,
+  type RepoNodeData,
 } from '@/lib/graph/graph-data';
+import { computeHighlight } from '@/lib/graph/highlight';
 import { computeLayout } from '@/lib/graph/layout';
 import type { DependencyGroup, RepoConfig } from '@/lib/types';
 import { PackageDetailsDrawer } from './package-details-drawer';
 import { PackageNode } from './package-node';
+import { RepoDetailsDrawer } from './repo-details-drawer';
 import { RepoNode } from './repo-node';
 
 const nodeTypes = { repo: RepoNode, package: PackageNode };
@@ -26,66 +37,93 @@ interface Props {
 
 export function DependencyGraph({ groups, repos }: Props) {
   const [sharedOnly, setSharedOnly] = useState(false);
-  const [hoveredPackageId, setHoveredPackageId] = useState<string | null>(null);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [selectedPackage, setSelectedPackage] = useState<PackageNodeData | null>(null);
+  const [selectedRepo, setSelectedRepo] = useState<RepoNodeData | null>(null);
+  // Positions moved by the user, keyed by node id — win over the computed layout.
+  const [dragOverrides, setDragOverrides] = useState<ReadonlyMap<string, { x: number; y: number }>>(
+    new Map(),
+  );
 
   const graphData = useMemo(() => {
     const full = buildGraphData(groups, repos);
     return sharedOnly ? filterSharedOnly(full) : full;
   }, [groups, repos, sharedOnly]);
 
-  // Layout recalculates only when the filtered graph changes (BDD scenario 3) —
-  // keyed on graphData alone so hover restyling doesn't re-run the simulation.
-  const positions = useMemo(() => {
-    const allNodes = [...graphData.repoNodes, ...graphData.packageNodes];
-    return computeLayout(
-      allNodes.map((node) => ({ id: node.id, type: node.type })),
-      graphData.edges.map((edge) => ({ source: edge.source, target: edge.target })),
-    );
-  }, [graphData]);
+  // Layout recomputes only when the graph's data changes (filter toggle, new analysis).
+  const positions = useMemo(
+    () =>
+      computeLayout(
+        [...graphData.repoNodes, ...graphData.packageNodes].map((node) => ({
+          id: node.id,
+          type: node.type,
+        })),
+        graphData.edges.map((edge) => ({ source: edge.source, target: edge.target })),
+      ),
+    [graphData],
+  );
 
-  const { nodes, edges } = useMemo(() => {
-    const allNodes = [...graphData.repoNodes, ...graphData.packageNodes];
+  const highlight = useMemo(
+    () => computeHighlight(graphData, selectedNodeId),
+    [graphData, selectedNodeId],
+  );
 
-    // Stale-hover guard: the hovered package may have been filtered out (e.g.
-    // via keyboard on the shared-only checkbox) while hovered — without this,
-    // every node would stay dimmed.
-    const hovered =
-      hoveredPackageId && graphData.packageNodes.some((n) => n.id === hoveredPackageId)
-        ? hoveredPackageId
-        : null;
+  const nodes: Node[] = useMemo(
+    () =>
+      [...graphData.repoNodes, ...graphData.packageNodes].map((node) => ({
+        id: node.id,
+        type: node.type,
+        position: dragOverrides.get(node.id) ?? positions.get(node.id) ?? { x: 0, y: 0 },
+        data: node.data,
+        style: highlight && !highlight.nodeIds.has(node.id) ? { opacity: DIMMED_OPACITY } : undefined,
+      })),
+    [graphData, positions, dragOverrides, highlight],
+  );
 
-    // Hover: keep the package and its parent repos fully visible, dim the rest.
-    const highlighted = new Set<string>();
-    if (hovered) {
-      highlighted.add(hovered);
-      for (const edge of graphData.edges) {
-        if (edge.target === hovered) highlighted.add(edge.source);
+  const edges: Edge[] = useMemo(
+    () =>
+      graphData.edges.map((edge) => ({
+        id: edge.id,
+        source: edge.source,
+        target: edge.target,
+        type: 'straight',
+        style: {
+          stroke: edge.stroke,
+          strokeWidth: highlight && highlight.edgeIds.has(edge.id) ? 2.5 : 1.5,
+          opacity: highlight && !highlight.edgeIds.has(edge.id) ? DIMMED_OPACITY : 1,
+        },
+      })),
+    [graphData, highlight],
+  );
+
+  const onNodesChange = useCallback((changes: NodeChange[]) => {
+    setDragOverrides((prev) => {
+      let next: Map<string, { x: number; y: number }> | null = null;
+      for (const change of changes) {
+        if (change.type === 'position' && change.position) {
+          next ??= new Map(prev);
+          next.set(change.id, change.position);
+        }
       }
+      return next ?? prev;
+    });
+  }, []);
+
+  const handleNodeClick: NodeMouseHandler = useCallback((_, node) => {
+    if (node.type === 'repo' || node.type === 'package') {
+      setSelectedNodeId((current) => (current === node.id ? null : node.id));
     }
+  }, []);
 
-    const nodes: Node[] = allNodes.map((node) => ({
-      id: node.id,
-      type: node.type,
-      position: positions.get(node.id) ?? { x: 0, y: 0 },
-      data: node.data,
-      style: hovered && !highlighted.has(node.id) ? { opacity: DIMMED_OPACITY } : undefined,
-    }));
+  const handleNodeDoubleClick: NodeMouseHandler = useCallback((_, node) => {
+    if (node.type === 'package') {
+      setSelectedPackage(node.data as PackageNodeData);
+    } else if (node.type === 'repo') {
+      setSelectedRepo(node.data as RepoNodeData);
+    }
+  }, []);
 
-    const edges: Edge[] = graphData.edges.map((edge) => ({
-      id: edge.id,
-      source: edge.source,
-      target: edge.target,
-      type: 'straight',
-      style: {
-        stroke: edge.stroke,
-        strokeWidth: hovered && edge.target === hovered ? 2.5 : 1.5,
-        opacity: hovered && edge.target !== hovered ? DIMMED_OPACITY : 1,
-      },
-    }));
-
-    return { nodes, edges };
-  }, [graphData, positions, hoveredPackageId]);
+  const handlePaneClick = useCallback(() => setSelectedNodeId(null), []);
 
   return (
     <div className="relative h-[calc(100vh-10rem)] w-full rounded-md border">
@@ -105,14 +143,10 @@ export function DependencyGraph({ groups, repos }: Props) {
         edges={edges}
         nodeTypes={nodeTypes}
         fitView
-        nodesDraggable={false}
-        onNodeMouseEnter={(_, node) => {
-          if (node.type === 'package') setHoveredPackageId(node.id);
-        }}
-        onNodeMouseLeave={() => setHoveredPackageId(null)}
-        onNodeClick={(_, node) => {
-          if (node.type === 'package') setSelectedPackage(node.data as PackageNodeData);
-        }}
+        onNodesChange={onNodesChange}
+        onNodeClick={handleNodeClick}
+        onNodeDoubleClick={handleNodeDoubleClick}
+        onPaneClick={handlePaneClick}
       >
         <Background />
         <Controls />
@@ -120,6 +154,11 @@ export function DependencyGraph({ groups, repos }: Props) {
       <PackageDetailsDrawer
         packageData={selectedPackage}
         onClose={() => setSelectedPackage(null)}
+      />
+      <RepoDetailsDrawer
+        graphData={graphData}
+        repo={selectedRepo}
+        onClose={() => setSelectedRepo(null)}
       />
     </div>
   );
