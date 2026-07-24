@@ -81,6 +81,32 @@ describe('buildGraphData', () => {
     // ids are unique:
     expect(new Set(edges.map((e) => e.id)).size).toBe(edges.length);
   });
+
+  it('skips projects whose repoId is not in the repos array (no dangling edges)', () => {
+    const staleGroups: DependencyGroup[] = [
+      {
+        depName: 'react',
+        versions: [
+          {
+            versionRange: '^18.2.0',
+            depTypes: ['dependencies'],
+            projects: [project('r1', 'acme/a'), project('ghost', 'acme/gone')],
+          },
+        ],
+      },
+    ];
+    const { repoNodes, packageNodes, edges } = buildGraphData(staleGroups, repos);
+    // no dangling edge to a non-existent repo node:
+    expect(edges).toHaveLength(1);
+    expect(edges[0].source).toBe('repo_r1');
+    // no version entry for the unknown repo either:
+    const react = packageNodes.find((n) => n.id === 'pkg_react')!;
+    expect(react.data.versions).toHaveLength(1);
+    expect(react.data.versions[0].repoId).toBe('r1');
+    // the rest of the graph still builds fine:
+    expect(repoNodes).toHaveLength(2);
+    expect(react.data.isShared).toBe(false); // only one surviving project
+  });
 });
 
 describe('filterSharedOnly', () => {

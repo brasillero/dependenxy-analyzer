@@ -77,6 +77,7 @@ const FALLBACK_COLOR = '#6b7280';
 export function buildGraphData(groups: DependencyGroup[], repos: RepoConfig[]): GraphData {
   const colorByRepoId = new Map(repos.map((repo, index) => [repo.id, repoColorFor(index)]));
   const branchByRepoId = new Map(repos.map((repo) => [repo.id, effectiveBranch(repo) ?? '']));
+  const knownRepoIds = new Set(repos.map((repo) => repo.id));
 
   const repoNodes: GraphRepoNode[] = repos.map((repo, index) => ({
     id: `repo_${repo.id}`,
@@ -93,14 +94,21 @@ export function buildGraphData(groups: DependencyGroup[], repos: RepoConfig[]): 
   const seenEdges = new Set<string>();
 
   for (const group of groups) {
-    const totalProjects = group.versions.reduce((n, v) => n + v.projects.length, 0);
-    const hasVersionDrift = group.versions.length > 1;
+    // Skip projects whose repoId is not in the repos array (stale analysis
+    // data, e.g. a repo removed after the analysis ran): their repo node does
+    // not exist, and an edge referencing a missing node makes d3-force's
+    // forceLink throw "node not found", crashing the whole graph view.
+    const survivingGroups = group.versions.filter((version) =>
+      version.projects.some((project) => knownRepoIds.has(project.repoId)),
+    );
+    const hasVersionDrift = survivingGroups.length > 1;
     const versions: PackageVersionInfo[] = [];
 
     // group.versions is sorted by project count desc (groupDependencies), so
     // index 0 is the majority range when drifted.
-    group.versions.forEach((version, versionIndex) => {
+    survivingGroups.forEach((version, versionIndex) => {
       for (const project of version.projects) {
+        if (!knownRepoIds.has(project.repoId)) continue;
         const color = colorByRepoId.get(project.repoId) ?? FALLBACK_COLOR;
         versions.push({
           repoId: project.repoId,
@@ -130,7 +138,7 @@ export function buildGraphData(groups: DependencyGroup[], repos: RepoConfig[]): 
       type: 'package',
       data: {
         packageName: group.depName,
-        isShared: totalProjects > 1,
+        isShared: versions.length > 1,
         hasVersionDrift,
         versions,
       },
