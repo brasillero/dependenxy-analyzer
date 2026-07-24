@@ -22,7 +22,13 @@ export function RepoNodeContent({ data }: { data: RepoNodeData }) {
 export function RepoNode({ data }: NodeProps<RepoFlowNode>) {
   return (
     <>
-      <Handle type="source" position={Position.Right} className="opacity-0" />
+      {/* Handle sits at the node's center so edges appear to attach from any direction. */}
+      <Handle
+        type="source"
+        position={Position.Right}
+        className="opacity-0"
+        style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}
+      />
       <RepoNodeContent data={data} />
     </>
   );

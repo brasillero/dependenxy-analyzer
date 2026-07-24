@@ -76,6 +76,7 @@ export function DependencyGraph({ groups, repos }: Props) {
       id: edge.id,
       source: edge.source,
       target: edge.target,
+      type: 'straight',
       style: {
         stroke: edge.stroke,
         strokeWidth: hovered && edge.target === hovered ? 2.5 : 1.5,
