@@ -83,3 +83,29 @@ export function groupDependencies(entries: DependencyEntry[]): DependencyGroup[]
   groups.sort((a, b) => Number(hasDrift(b)) - Number(hasDrift(a)) || projectCount(b) - projectCount(a));
   return groups;
 }
+
+export interface VisibilityFilter {
+  hideUnique: boolean;
+  hideShared: boolean;
+}
+
+/** Total project count of a group (distinct repo+package pairs across all versions). */
+export function totalProjects(group: DependencyGroup): number {
+  return group.versions.reduce((n, v) => n + v.projects.length, 0);
+}
+
+/**
+ * Visibility filtering for the analysis view: unique = exactly 1 project,
+ * shared = more than 1. Both flags compose; both on hides everything.
+ */
+export function filterGroupsByVisibility(
+  groups: DependencyGroup[],
+  filter: VisibilityFilter,
+): DependencyGroup[] {
+  return groups.filter((group) => {
+    const count = totalProjects(group);
+    if (filter.hideUnique && count === 1) return false;
+    if (filter.hideShared && count > 1) return false;
+    return true;
+  });
+}

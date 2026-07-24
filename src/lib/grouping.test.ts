@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { flattenDependencies, groupDependencies, hasDrift } from './grouping';
+import { flattenDependencies, groupDependencies, hasDrift, totalProjects, filterGroupsByVisibility } from './grouping';
 import type { PackageJsonFile, RepoConfig } from '@/lib/types';
 
 function repo(id: string): RepoConfig {
@@ -129,5 +129,63 @@ describe('groupDependencies', () => {
     const groups = groupDependencies(entries);
     expect(groups[0].depName).toBe('drifted');
     expect(groups[1].depName).toBe('common');
+  });
+});
+
+describe('totalProjects', () => {
+  it('sums projects across all versions of a group', () => {
+    const entries = flattenDependencies([
+      { repo: repo('a'), files: [pkg('package.json', { dependencies: { x: '^1.0.0' } })] },
+      { repo: repo('b'), files: [pkg('package.json', { dependencies: { x: '^2.0.0' } })] },
+    ]);
+    const [group] = groupDependencies(entries);
+    expect(totalProjects(group)).toBe(2);
+  });
+});
+
+describe('filterGroupsByVisibility', () => {
+  function groupsFixture() {
+    return groupDependencies(
+      flattenDependencies([
+        { repo: repo('a'), files: [pkg('package.json', { dependencies: { shared: '^1.0.0', unique: '^1.0.0' } })] },
+        { repo: repo('b'), files: [pkg('package.json', { dependencies: { shared: '^1.0.0' } })] },
+      ]),
+    );
+  }
+
+  it('returns everything when both filters are off', () => {
+    const groups = groupsFixture();
+    expect(filterGroupsByVisibility(groups, { hideUnique: false, hideShared: false })).toHaveLength(2);
+  });
+
+  it('hideUnique drops groups used by exactly one project', () => {
+    const result = filterGroupsByVisibility(groupsFixture(), { hideUnique: true, hideShared: false });
+    expect(result.map((g) => g.depName)).toEqual(['shared']);
+  });
+
+  it('hideShared drops groups used by more than one project', () => {
+    const result = filterGroupsByVisibility(groupsFixture(), { hideUnique: false, hideShared: true });
+    expect(result.map((g) => g.depName)).toEqual(['unique']);
+  });
+
+  it('both on hides everything', () => {
+    const result = filterGroupsByVisibility(groupsFixture(), { hideUnique: true, hideShared: true });
+    expect(result).toEqual([]);
+  });
+
+  it('counts monorepo packages individually: a dep in 2 packages of one repo is shared', () => {
+    const groups = groupDependencies(
+      flattenDependencies([
+        {
+          repo: repo('mono'),
+          files: [
+            pkg('packages/a/package.json', { dependencies: { x: '^1.0.0' } }),
+            pkg('packages/b/package.json', { dependencies: { x: '^1.0.0' } }),
+          ],
+        },
+      ]),
+    );
+    expect(filterGroupsByVisibility(groups, { hideUnique: false, hideShared: true })).toEqual([]);
+    expect(filterGroupsByVisibility(groups, { hideUnique: true, hideShared: false })).toHaveLength(1);
   });
 });
