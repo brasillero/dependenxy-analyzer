@@ -14,6 +14,7 @@ import { describeError } from '@/lib/errors';
 import { DEP_TYPES } from '@/lib/types';
 import { useRepoStore } from '@/stores/repo-store';
 import { useSettingsStore } from '@/stores/settings-store';
+import { useTokenStore } from '@/stores/token-store';
 
 export function DependencyPanel() {
   const repos = useRepoStore((s) => s.repos);
@@ -22,6 +23,7 @@ export function DependencyPanel() {
   const queryClient = useQueryClient();
 
   const repo = repos.find((r) => r.id === selectedRepoId) ?? null;
+  const hasToken = useTokenStore((s) => (repo ? s.tokenFor(repo) !== null : false));
   const branch = repo ? effectiveBranch(repo) : undefined;
   const { data, isLoading, error } = usePackageJsonFiles(repo, branch);
 
@@ -66,8 +68,8 @@ export function DependencyPanel() {
       <div className="flex items-center gap-3">
         <h2 className="font-mono text-sm font-medium">{repo.displayName}</h2>
         {branch && <span className="text-sm text-muted-foreground">on {branch}</span>}
-        {data && <Badge variant="secondary">{data.files.length} package.json</Badge>}
-        {data && data.failedCount > 0 && (
+        {data && hasToken && <Badge variant="secondary">{data.files.length} package.json</Badge>}
+        {data && hasToken && data.failedCount > 0 && (
           <Badge
             variant="outline"
             className="border-amber-500/50 bg-amber-500/10 text-amber-700 dark:text-amber-400"
@@ -86,30 +88,37 @@ export function DependencyPanel() {
         </Button>
       </div>
 
-      {error && (
+      {!hasToken && (
+        <p className="text-sm text-muted-foreground">
+          No access token configured for {repo.host} — open Access Tokens to add it.
+        </p>
+      )}
+
+      {hasToken && error && (
         <Card>
           <CardContent className="p-4 text-sm text-destructive">{describeError(error)}</CardContent>
         </Card>
       )}
 
-      {isLoading && (
+      {hasToken && isLoading && (
         <div className="space-y-3">
           <Skeleton className="h-32 w-full" />
           <Skeleton className="h-32 w-full" />
         </div>
       )}
 
-      {data && allTypesOff && (
+      {hasToken && data && allTypesOff && (
         <p className="text-sm text-muted-foreground">
           All dependency types are hidden — re-enable at least one type in the header.
         </p>
       )}
 
-      {data && !allTypesOff && data.files.length === 0 && (
+      {hasToken && data && !allTypesOff && data.files.length === 0 && (
         <p className="text-sm text-muted-foreground">No package.json files found in this branch.</p>
       )}
 
-      {data &&
+      {hasToken &&
+        data &&
         !allTypesOff &&
         data.files.map((file) => (
           <PackageJsonCard key={file.path} file={file} enabledTypes={enabledDepTypes} />
