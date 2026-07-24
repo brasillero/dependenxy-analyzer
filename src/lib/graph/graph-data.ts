@@ -67,8 +67,6 @@ export interface GraphData {
   edges: GraphEdge[];
 }
 
-const FALLBACK_COLOR = '#6b7280';
-
 /**
  * Transform the analysis result into graph primitives.
  * IDs: `repo_<repoId>` / `pkg_<depName>` (never bare names — collision safety).
@@ -108,8 +106,10 @@ export function buildGraphData(groups: DependencyGroup[], repos: RepoConfig[]): 
     // index 0 is the majority range when drifted.
     survivingGroups.forEach((version, versionIndex) => {
       for (const project of version.projects) {
-        if (!knownRepoIds.has(project.repoId)) continue;
-        const color = colorByRepoId.get(project.repoId) ?? FALLBACK_COLOR;
+        // Unknown repoIds were already excluded from survivingGroups, so the
+        // color lookup doubles as the guard and cannot miss.
+        const color = colorByRepoId.get(project.repoId);
+        if (color === undefined) continue;
         versions.push({
           repoId: project.repoId,
           repoName: project.repoName,
@@ -133,16 +133,20 @@ export function buildGraphData(groups: DependencyGroup[], repos: RepoConfig[]): 
       }
     });
 
-    packageNodes.push({
-      id: `pkg_${group.depName}`,
-      type: 'package',
-      data: {
-        packageName: group.depName,
-        isShared: versions.length > 1,
-        hasVersionDrift,
-        versions,
-      },
-    });
+    // A package whose every project was filtered out (all ghost repos) has no
+    // surviving versions — emitting it would leave an orphan node.
+    if (versions.length > 0) {
+      packageNodes.push({
+        id: `pkg_${group.depName}`,
+        type: 'package',
+        data: {
+          packageName: group.depName,
+          isShared: versions.length > 1,
+          hasVersionDrift,
+          versions,
+        },
+      });
+    }
   }
 
   return { repoNodes, packageNodes, edges };
