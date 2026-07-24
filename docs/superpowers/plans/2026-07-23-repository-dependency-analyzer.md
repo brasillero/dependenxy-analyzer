@@ -3920,4 +3920,16 @@ git commit -m "feat: wire main page layout and views"
 | §6.2 security (no token persistence, no-store, SSRF guard) | 4, 8, 9, 10 |
 | Docker/deploy | **Out of scope per user instruction** |
 
-Known deliberate deviations from the spec: none functional. The GitLab recursive tree uses the paginated facade in `providers/index.ts` (spec's symmetric interface preserved at the hook level). Dark mode: CSS variables only, no UI toggle (spec §5.2).
+## Execution Deviations (recorded post-implementation, 2026-07-23)
+
+The plan was executed with subagent-driven development (all 20 tasks + two-stage review each). Deviations from this plan's original text, all review-approved:
+
+- **ky v2 API**: installed ky is 2.0.2, so `prefixUrl` → `prefix` and the `beforeRequest` hook takes `({ request })`; `toStatusError` reads the upstream body from ky v2's `error.data` (the `error.response.text()` approach is inert in v2).
+- **shadcn CLI pinned to 3.8.5**: `shadcn@latest` (4.x) no longer generates new-york style; the CLI is pinned as a devDependency.
+- **SSRF guard hardened beyond spec** (security review): trailing-dot hostnames, IPv4-mapped IPv6 (`[::ffff:]`), IPv6 ULA/link-local/NAT64 (fc00::/7, fe80::/10, `::`, 64:ff9b::/96) also rejected; normalization regression tests added.
+- **GitLab proxy uses the raw request-URL path**, not catch-all params (Next.js decodes `%2F`, which would break project ids); route also uses `redirect: 'manual'`, a 30s upstream timeout, and a 502-JSON error contract (GitHub route got the same timeout/502 pattern).
+- **Pagination guards**: branch listing capped at 5 pages (both providers); GitLab tree listing capped at 100 pages; `gitlabProvider.listPackageJsonPaths` single-page fallback throws with a pointer to the facade.
+- **Persisted stores use `skipHydration: true`** with manual `rehydrate()` in the page's mount effect (SSR/first-render consistency); Task 20's original `setMounted(true)` snippet was superseded.
+- **Grouping sorts drift-first**, project count as tiebreak (RF-09.1 vs §4.5 reconciliation; spec contradicted itself).
+- **UI behavior deviations from spec, accepted as improvements**: token-blocked states show inline badges/hints instead of toasts; the "0 package.json" empty state shows a text message plus the count badge; depTypes are displayed per version group (RF-09.5); a token-needed hint appears in the dependency panel when credentials are missing; token inputs use `autoComplete="new-password"` so browsers don't offer to save tokens.
+- **Not implemented (accepted)**: RN-08.9 branch attribution in analysis results (soft spec language); Docker/deploy (out of scope per user instruction); dark-mode toggle (CSS variables only, spec §5.2).
