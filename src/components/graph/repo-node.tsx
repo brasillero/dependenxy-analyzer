@@ -27,7 +27,7 @@ export function RepoNode({ data }: NodeProps<RepoFlowNode>) {
         type="source"
         position={Position.Right}
         className="opacity-0"
-        style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}
+        style={{ top: '50%', left: '50%', right: 'auto', transform: 'translate(-50%, -50%)' }}
       />
       <RepoNodeContent data={data} />
     </>
