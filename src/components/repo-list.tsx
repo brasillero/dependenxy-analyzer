@@ -21,6 +21,7 @@ export function RepoList() {
           key={repo.id}
           role="button"
           tabIndex={0}
+          aria-pressed={repo.id === selectedRepoId}
           className={cn(
             'cursor-pointer transition-colors',
             repo.id === selectedRepoId && 'border-primary ring-1 ring-primary',

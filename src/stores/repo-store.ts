@@ -12,7 +12,7 @@ interface RepoState {
   selectRepo: (id: string | null) => void;
 }
 
-function sameIdentity(a: RepoConfig, b: RepoConfig): boolean {
+export function sameIdentity(a: RepoConfig, b: RepoConfig): boolean {
   if (a.provider !== b.provider || a.host !== b.host) return false;
   // GitHub paths are case-insensitive; GitLab paths are case-sensitive.
   if (a.provider === 'github') return a.path.toLowerCase() === b.path.toLowerCase();

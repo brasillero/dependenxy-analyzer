@@ -3,7 +3,7 @@ import type { DependencyGroup, RepoConfig } from './types';
 import { fetchPackageJsonFiles, type PackageFilesResult } from './package-files';
 import { flattenDependencies, groupDependencies, type RepoFiles } from './grouping';
 import { describeError } from './errors';
-import { effectiveBranch } from '@/hooks/use-package-json-files';
+import { effectiveBranch } from '@/lib/package-files';
 import { useTokenStore } from '@/stores/token-store';
 
 export interface AnalysisFailure {

@@ -3,10 +3,7 @@ import type { RepoConfig } from '@/lib/types';
 import { fetchPackageJsonFiles } from '@/lib/package-files';
 import { useTokenStore } from '@/stores/token-store';
 
-/** Effective branch: explicit user selection wins over the repo default. */
-export function effectiveBranch(repo: RepoConfig): string | undefined {
-  return repo.selectedBranch ?? repo.defaultBranch;
-}
+export { effectiveBranch } from '@/lib/package-files';
 
 /**
  * package.json files for one repo+branch — cache keyed

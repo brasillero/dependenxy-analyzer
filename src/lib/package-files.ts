@@ -10,6 +10,11 @@ export interface PackageFilesResult {
 
 export const FETCH_CONCURRENCY = 8;
 
+/** Effective branch: explicit user selection wins over the repo default. */
+export function effectiveBranch(repo: RepoConfig): string | undefined {
+  return repo.selectedBranch ?? repo.defaultBranch;
+}
+
 /**
  * Fetch every package.json path with bounded concurrency (max 8 in flight —
  * spec §4.6). Individual failures are skipped and counted, never fatal.

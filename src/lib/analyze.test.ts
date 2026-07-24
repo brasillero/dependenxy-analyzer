@@ -4,7 +4,8 @@ import { runAnalysis } from './analyze';
 import { useTokenStore } from '@/stores/token-store';
 import type { PackageJsonFile, RepoConfig } from './types';
 
-vi.mock('./package-files', () => ({
+vi.mock('./package-files', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./package-files')>()),
   fetchPackageJsonFiles: vi.fn(),
 }));
 

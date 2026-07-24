@@ -21,7 +21,7 @@ export function AppHeader() {
     setAnalyzing(true);
     try {
       const { groups, failed } = await runAnalysis(repos, queryClient);
-      useViewStore.getState().setAnalysis(groups, failed);
+      useViewStore.getState().setAnalysis(groups, failed, failed.length === repos.length);
       if (failed.length === repos.length) {
         toast.error('No repository could be analyzed.');
       }

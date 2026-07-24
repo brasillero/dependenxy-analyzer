@@ -10,7 +10,7 @@ import { createProxyClient } from '@/lib/proxy-client';
 import { getProvider } from '@/lib/providers';
 import { describeError } from '@/lib/errors';
 import type { RepoConfig } from '@/lib/types';
-import { useRepoStore } from '@/stores/repo-store';
+import { useRepoStore, sameIdentity } from '@/stores/repo-store';
 import { useTokenStore } from '@/stores/token-store';
 
 /** Client-side URL parse — invalid URLs are rejected before any request (§6.3). */
@@ -55,14 +55,7 @@ export function AddRepoForm() {
     }
 
     // Dedupe before any network call — same provider+host+path rules as the store.
-    const existing = useRepoStore.getState().repos.find(
-      (r) =>
-        r.provider === draft.provider &&
-        r.host === draft.host &&
-        (draft.provider === 'github'
-          ? r.path.toLowerCase() === draft.path.toLowerCase()
-          : r.path === draft.path),
-    );
+    const existing = useRepoStore.getState().repos.find((r) => sameIdentity(r, draft));
     if (existing) {
       selectRepo(existing.id);
       setUrl('');

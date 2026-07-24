@@ -27,7 +27,14 @@ export async function GET(
   // instead because its host is client-controlled.
   let upstream: Response;
   try {
-    upstream = await fetch(upstreamUrl, { headers, cache: 'no-store', redirect: 'follow' });
+    upstream = await fetch(upstreamUrl, {
+      headers,
+      cache: 'no-store',
+      redirect: 'follow',
+      // A hung or dribbling upstream must not hold the route open forever.
+      // The timeout aborts the fetch, which throws and lands in the 502 below.
+      signal: AbortSignal.timeout(30_000),
+    });
   } catch {
     return NextResponse.json(
       { message: 'Upstream request failed — host unreachable or network error.' },

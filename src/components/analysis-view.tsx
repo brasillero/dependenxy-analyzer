@@ -12,6 +12,7 @@ import { useViewStore } from '@/stores/view-store';
 export function AnalysisView() {
   const analysis = useViewStore((s) => s.analysis);
   const analysisFailed = useViewStore((s) => s.analysisFailed);
+  const analysisTotalFailed = useViewStore((s) => s.analysisTotalFailed);
   const setView = useViewStore((s) => s.setView);
   const [search, setSearch] = useState('');
   const [bannerDismissed, setBannerDismissed] = useState(false);
@@ -78,8 +79,11 @@ export function AnalysisView() {
           <CardContent className="flex items-start gap-3 p-4">
             <div className="min-w-0 flex-1 space-y-1">
               <p className="text-sm font-medium text-amber-700 dark:text-amber-400">
-                Partial analysis — {analysisFailed.length} repositor
-                {analysisFailed.length === 1 ? 'y' : 'ies'} failed
+                {analysisTotalFailed
+                  ? 'Analysis failed — no repository could be analyzed.'
+                  : `Partial analysis — ${analysisFailed.length} repositor${
+                      analysisFailed.length === 1 ? 'y' : 'ies'
+                    } failed`}
               </p>
               <ul className="space-y-0.5 text-sm text-amber-700 dark:text-amber-400">
                 {analysisFailed.map((failure, index) => (
