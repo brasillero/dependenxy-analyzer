@@ -47,12 +47,20 @@ export function DependencyGraph({ groups, repos }: Props) {
   const { nodes, edges } = useMemo(() => {
     const allNodes = [...graphData.repoNodes, ...graphData.packageNodes];
 
+    // Stale-hover guard: the hovered package may have been filtered out (e.g.
+    // via keyboard on the shared-only checkbox) while hovered — without this,
+    // every node would stay dimmed.
+    const hovered =
+      hoveredPackageId && graphData.packageNodes.some((n) => n.id === hoveredPackageId)
+        ? hoveredPackageId
+        : null;
+
     // Hover: keep the package and its parent repos fully visible, dim the rest.
     const highlighted = new Set<string>();
-    if (hoveredPackageId) {
-      highlighted.add(hoveredPackageId);
+    if (hovered) {
+      highlighted.add(hovered);
       for (const edge of graphData.edges) {
-        if (edge.target === hoveredPackageId) highlighted.add(edge.source);
+        if (edge.target === hovered) highlighted.add(edge.source);
       }
     }
 
@@ -61,8 +69,7 @@ export function DependencyGraph({ groups, repos }: Props) {
       type: node.type,
       position: positions.get(node.id) ?? { x: 0, y: 0 },
       data: node.data,
-      style:
-        hoveredPackageId && !highlighted.has(node.id) ? { opacity: DIMMED_OPACITY } : undefined,
+      style: hovered && !highlighted.has(node.id) ? { opacity: DIMMED_OPACITY } : undefined,
     }));
 
     const edges: Edge[] = graphData.edges.map((edge) => ({
@@ -71,8 +78,8 @@ export function DependencyGraph({ groups, repos }: Props) {
       target: edge.target,
       style: {
         stroke: edge.stroke,
-        strokeWidth: hoveredPackageId && edge.target === hoveredPackageId ? 2.5 : 1.5,
-        opacity: hoveredPackageId && edge.target !== hoveredPackageId ? DIMMED_OPACITY : 1,
+        strokeWidth: hovered && edge.target === hovered ? 2.5 : 1.5,
+        opacity: hovered && edge.target !== hovered ? DIMMED_OPACITY : 1,
       },
     }));
 
@@ -97,6 +104,7 @@ export function DependencyGraph({ groups, repos }: Props) {
         edges={edges}
         nodeTypes={nodeTypes}
         fitView
+        nodesDraggable={false}
         onNodeMouseEnter={(_, node) => {
           if (node.type === 'package') setHoveredPackageId(node.id);
         }}
