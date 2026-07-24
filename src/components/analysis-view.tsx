@@ -4,8 +4,10 @@ import { useMemo, useState } from 'react';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { DependencyGroupCard } from '@/components/dependency-group-card';
+import { filterGroupsByVisibility } from '@/lib/grouping';
 import { pluralize } from '@/lib/utils';
 import { useViewStore } from '@/stores/view-store';
 
@@ -15,6 +17,8 @@ export function AnalysisView() {
   const analysisTotalFailed = useViewStore((s) => s.analysisTotalFailed);
   const setView = useViewStore((s) => s.setView);
   const [search, setSearch] = useState('');
+  const [hideUnique, setHideUnique] = useState(false);
+  const [hideShared, setHideShared] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(false);
 
   // A new analysis run (new analysisFailed array identity) re-arms the banner
@@ -26,11 +30,11 @@ export function AnalysisView() {
   }
 
   const filtered = useMemo(() => {
-    const groups = analysis ?? [];
+    const byVisibility = filterGroupsByVisibility(analysis ?? [], { hideUnique, hideShared });
     const term = search.trim().toLowerCase();
-    if (!term) return groups;
-    return groups.filter((g) => g.depName.toLowerCase().includes(term));
-  }, [analysis, search]);
+    if (!term) return byVisibility;
+    return byVisibility.filter((g) => g.depName.toLowerCase().includes(term));
+  }, [analysis, search, hideUnique, hideShared]);
 
   // "M projects" = distinct (repoId, packagePath) pairs across the result.
   const projectCount = useMemo(() => {
@@ -72,6 +76,22 @@ export function AnalysisView() {
           aria-label="Search dependency"
           className="ml-auto w-64"
         />
+        <label className="flex items-center gap-1.5 text-sm cursor-pointer">
+          <Checkbox
+            checked={hideUnique}
+            onCheckedChange={(checked) => setHideUnique(checked === true)}
+            aria-label="Hide unique"
+          />
+          Hide unique
+        </label>
+        <label className="flex items-center gap-1.5 text-sm cursor-pointer">
+          <Checkbox
+            checked={hideShared}
+            onCheckedChange={(checked) => setHideShared(checked === true)}
+            aria-label="Hide shared"
+          />
+          Hide shared
+        </label>
       </div>
 
       {showBanner && (
@@ -110,7 +130,9 @@ export function AnalysisView() {
         <p className="text-sm text-muted-foreground">
           {analysis.length === 0
             ? 'No dependencies found in the analyzed repositories.'
-            : 'No dependencies match your search.'}
+            : search.trim()
+              ? 'No dependencies match your search.'
+              : 'All dependencies are hidden by the current filters.'}
         </p>
       )}
 
