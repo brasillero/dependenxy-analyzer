@@ -15,10 +15,9 @@ const FORWARD_HEADERS = [
   'retry-after',
 ];
 
-export async function GET(
-  req: NextRequest,
-  _ctx: { params: Promise<{ path: string[] }> },
-): Promise<NextResponse> {
+// NOTE: no second `ctx` argument — the catch-all params are decoded by Next.js
+// and unusable here; the raw path is taken from the request URL instead.
+export async function GET(req: NextRequest): Promise<NextResponse> {
   // The target host is client-controlled — validate before dispatching or
   // this route is an open proxy into the internal network (SSRF).
   const rawHost = req.headers.get('x-gitlab-host') ?? DEFAULT_HOST;
