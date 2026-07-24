@@ -40,12 +40,14 @@ export function PackageNodeContent({ data }: { data: PackageNodeData }) {
 export function PackageNode({ data }: NodeProps<PackageFlowNode>) {
   return (
     <>
-      {/* Handle sits at the node's center so edges appear to attach from any direction. */}
+      {/* Centered so edges appear to attach from any direction; isConnectable={false}
+          keeps pointer-down from starting a connection so the node stays draggable. */}
       <Handle
         type="target"
         position={Position.Left}
         className="opacity-0"
         style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}
+        isConnectable={false}
       />
       <PackageNodeContent data={data} />
     </>

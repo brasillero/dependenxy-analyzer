@@ -22,12 +22,14 @@ export function RepoNodeContent({ data }: { data: RepoNodeData }) {
 export function RepoNode({ data }: NodeProps<RepoFlowNode>) {
   return (
     <>
-      {/* Handle sits at the node's center so edges appear to attach from any direction. */}
+      {/* Centered so edges appear to attach from any direction; isConnectable={false}
+          keeps pointer-down from starting a connection so the node stays draggable. */}
       <Handle
         type="source"
         position={Position.Right}
         className="opacity-0"
         style={{ top: '50%', left: '50%', right: 'auto', transform: 'translate(-50%, -50%)' }}
+        isConnectable={false}
       />
       <RepoNodeContent data={data} />
     </>
