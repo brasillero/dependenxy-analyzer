@@ -8,7 +8,12 @@ export function PackageNodeContent({ data }: { data: PackageNodeData }) {
   return (
     <div className="rounded-full border bg-card px-3 py-1.5 shadow-sm">
       <div className="flex items-center gap-2">
-        <span className="font-mono text-xs font-bold">{data.packageName}</span>
+        <span
+          className="inline-block max-w-40 truncate font-mono text-xs font-bold"
+          title={data.packageName}
+        >
+          {data.packageName}
+        </span>
         {data.hasVersionDrift && (
           <span className="rounded-full border border-amber-500/50 bg-amber-500/10 px-1.5 text-[10px] text-amber-700 dark:text-amber-400">
             drift

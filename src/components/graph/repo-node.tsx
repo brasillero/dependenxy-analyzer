@@ -10,7 +10,9 @@ export function RepoNodeContent({ data }: { data: RepoNodeData }) {
       className="rounded-md border-2 bg-card px-4 py-2 shadow-sm"
       style={{ borderColor: data.color }}
     >
-      <p className="font-mono text-sm font-medium">{data.label}</p>
+      <p className="max-w-56 truncate font-mono text-sm font-medium" title={data.label}>
+        {data.label}
+      </p>
       <p className="text-xs text-muted-foreground">on {data.branch}</p>
     </div>
   );

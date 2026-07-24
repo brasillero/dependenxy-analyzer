@@ -28,7 +28,7 @@ const STATUS_LABELS = {
 export function PackageDetailsDrawer({ packageData, onClose }: Props) {
   return (
     <Sheet open={packageData !== null} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent className="w-[440px] overflow-y-auto">
+      <SheetContent className="overflow-y-auto sm:max-w-[440px]">
         {packageData && (
           <>
             <SheetHeader>
