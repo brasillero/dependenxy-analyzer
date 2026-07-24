@@ -29,6 +29,7 @@ export function buildFlowNodes(
     const cached = cache.get(node.id);
     if (
       cached &&
+      cached.type === node.type &&
       cached.position.x === position.x &&
       cached.position.y === position.y &&
       cached.data === node.data &&

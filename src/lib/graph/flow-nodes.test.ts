@@ -65,4 +65,15 @@ describe('buildFlowNodes', () => {
     // highlighted node unchanged → identity preserved:
     expect(withHighlight.find((n) => n.id === 'repo_r1')).toBe(first.find((n) => n.id === 'repo_r1'));
   });
+
+  it('evicts nodes that left the graph from the cache', () => {
+    const cache = new Map<string, Node>();
+    build(cache);
+    expect(cache.size).toBe(2);
+    const noPackages = buildGraphData([], repos);
+    buildFlowNodes(noPackages, positions, new Map(), null, cache);
+    expect(cache.size).toBe(1);
+    expect(cache.has('repo_r1')).toBe(true);
+    expect(cache.has('pkg_react')).toBe(false);
+  });
 });
