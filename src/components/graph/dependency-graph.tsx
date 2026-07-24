@@ -68,17 +68,21 @@ export function DependencyGraph({ groups, repos }: Props) {
     [graphData, selectedNodeId],
   );
 
-  const nodes: Node[] = useMemo(
-    () =>
-      [...graphData.repoNodes, ...graphData.packageNodes].map((node) => ({
-        id: node.id,
-        type: node.type,
-        position: dragOverrides.get(node.id) ?? positions.get(node.id) ?? { x: 0, y: 0 },
-        data: node.data,
-        style: highlight && !highlight.nodeIds.has(node.id) ? { opacity: DIMMED_OPACITY } : undefined,
-      })),
-    [graphData, positions, dragOverrides, highlight],
-  );
+  const nodes: Node[] = useMemo(() => {
+    // Prune stale overrides: a node dragged in a previous graph (filter toggle,
+    // new analysis) must not pin a same-id node off-viewport.
+    const currentIds = new Set(
+      [...graphData.repoNodes, ...graphData.packageNodes].map((node) => node.id),
+    );
+    const activeOverrides = new Map([...dragOverrides].filter(([id]) => currentIds.has(id)));
+    return [...graphData.repoNodes, ...graphData.packageNodes].map((node) => ({
+      id: node.id,
+      type: node.type,
+      position: activeOverrides.get(node.id) ?? positions.get(node.id) ?? { x: 0, y: 0 },
+      data: node.data,
+      style: highlight && !highlight.nodeIds.has(node.id) ? { opacity: DIMMED_OPACITY } : undefined,
+    }));
+  }, [graphData, positions, dragOverrides, highlight]);
 
   const edges: Edge[] = useMemo(
     () =>
@@ -100,6 +104,8 @@ export function DependencyGraph({ groups, repos }: Props) {
     setDragOverrides((prev) => {
       let next: Map<string, { x: number; y: number }> | null = null;
       for (const change of changes) {
+        // Non-position changes (dimensions, select) are intentionally ignored:
+        // selection is managed externally and React Flow keeps its own measurements.
         if (change.type === 'position' && change.position) {
           next ??= new Map(prev);
           next.set(change.id, change.position);
@@ -120,6 +126,12 @@ export function DependencyGraph({ groups, repos }: Props) {
       setSelectedPackage(node.data as PackageNodeData);
     } else if (node.type === 'repo') {
       setSelectedRepo(node.data as RepoNodeData);
+    }
+    if (node.type === 'package' || node.type === 'repo') {
+      // Deterministic end state: a double click fires onNodeClick twice first
+      // (select → deselect); pin the selection so the highlight always matches
+      // what the open drawer is showing.
+      setSelectedNodeId(node.id);
     }
   }, []);
 

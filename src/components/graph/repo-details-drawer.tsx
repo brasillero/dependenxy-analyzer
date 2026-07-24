@@ -41,7 +41,11 @@ export function RepoDetailsDrawer({ graphData, repo, onClose }: Props) {
                   {pluralize(rows.length, 'package', 'packages')}
                 </Badge>
               </SheetTitle>
-              <SheetDescription>Dependencies declared on {repo.branch}.</SheetDescription>
+              <SheetDescription>
+                {repo.branch
+                  ? `Dependencies declared on ${repo.branch}.`
+                  : 'Dependencies declared in this repository.'}
+              </SheetDescription>
             </SheetHeader>
             <Table className="mt-4">
               <TableHeader>
