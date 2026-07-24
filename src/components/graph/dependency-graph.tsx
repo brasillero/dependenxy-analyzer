@@ -34,13 +34,18 @@ export function DependencyGraph({ groups, repos }: Props) {
     return sharedOnly ? filterSharedOnly(full) : full;
   }, [groups, repos, sharedOnly]);
 
-  const { nodes, edges } = useMemo(() => {
+  // Layout recalculates only when the filtered graph changes (BDD scenario 3) —
+  // keyed on graphData alone so hover restyling doesn't re-run the simulation.
+  const positions = useMemo(() => {
     const allNodes = [...graphData.repoNodes, ...graphData.packageNodes];
-    // Layout recalculates whenever the filtered graph changes (BDD scenario 3).
-    const positions = computeLayout(
+    return computeLayout(
       allNodes.map((node) => ({ id: node.id, type: node.type })),
       graphData.edges.map((edge) => ({ source: edge.source, target: edge.target })),
     );
+  }, [graphData]);
+
+  const { nodes, edges } = useMemo(() => {
+    const allNodes = [...graphData.repoNodes, ...graphData.packageNodes];
 
     // Hover: keep the package and its parent repos fully visible, dim the rest.
     const highlighted = new Set<string>();
@@ -72,7 +77,7 @@ export function DependencyGraph({ groups, repos }: Props) {
     }));
 
     return { nodes, edges };
-  }, [graphData, hoveredPackageId]);
+  }, [graphData, positions, hoveredPackageId]);
 
   return (
     <div className="relative h-[calc(100vh-10rem)] w-full rounded-md border">
