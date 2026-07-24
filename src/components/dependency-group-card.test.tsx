@@ -60,4 +60,12 @@ describe('DependencyGroupCard', () => {
     expect(screen.getByText(/4 projects/)).toBeInTheDocument();
     expect(screen.getByText(/2 versions/)).toBeInTheDocument();
   });
+
+  it('shows short dep-type labels per version group (RF-09.5)', () => {
+    const { rerender } = render(<DependencyGroupCard group={drifted} />);
+    expect(screen.getAllByText('deps').length).toBeGreaterThan(0);
+    rerender(<DependencyGroupCard group={converged} />);
+    expect(screen.getByText('deps')).toBeInTheDocument();
+    expect(screen.getByText('dev')).toBeInTheDocument();
+  });
 });

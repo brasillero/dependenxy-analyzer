@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { DependencyGroupCard } from '@/components/dependency-group-card';
+import { pluralize } from '@/lib/utils';
 import { useViewStore } from '@/stores/view-store';
 
 export function AnalysisView() {
@@ -14,6 +15,14 @@ export function AnalysisView() {
   const setView = useViewStore((s) => s.setView);
   const [search, setSearch] = useState('');
   const [bannerDismissed, setBannerDismissed] = useState(false);
+
+  // A new analysis run (new analysisFailed array identity) re-arms the banner
+  // (RF-09.4). Render-time state adjustment, per React docs — avoids an effect.
+  const [prevFailed, setPrevFailed] = useState(analysisFailed);
+  if (prevFailed !== analysisFailed) {
+    setPrevFailed(analysisFailed);
+    setBannerDismissed(false);
+  }
 
   const filtered = useMemo(() => {
     const groups = analysis ?? [];
@@ -49,7 +58,8 @@ export function AnalysisView() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
         <h2 className="text-sm font-medium">
-          Analysis — {analysis.length} dependencies across {projectCount} projects
+          Analysis — {pluralize(analysis.length, 'dependency', 'dependencies')} across{' '}
+          {pluralize(projectCount, 'project', 'projects')}
         </h2>
         <Button variant="outline" size="sm" onClick={() => setView('repo')}>
           Back to repository view
@@ -72,8 +82,8 @@ export function AnalysisView() {
                 {analysisFailed.length === 1 ? 'y' : 'ies'} failed
               </p>
               <ul className="space-y-0.5 text-sm text-amber-700 dark:text-amber-400">
-                {analysisFailed.map((failure) => (
-                  <li key={failure.repoName}>
+                {analysisFailed.map((failure, index) => (
+                  <li key={`${failure.repoName}:${index}`}>
                     <span className="font-mono">{failure.repoName}</span> — {failure.error}
                   </li>
                 ))}

@@ -1,7 +1,14 @@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { hasDrift } from '@/lib/grouping';
+import { pluralize } from '@/lib/utils';
 import type { DependencyGroup } from '@/lib/types';
+
+const DEP_TYPE_LABELS: Record<string, string> = {
+  dependencies: 'deps',
+  devDependencies: 'dev',
+  peerDependencies: 'peer',
+};
 
 export function DependencyGroupCard({ group }: { group: DependencyGroup }) {
   const projectCount = group.versions.reduce((n, v) => n + v.projects.length, 0);
@@ -12,10 +19,8 @@ export function DependencyGroupCard({ group }: { group: DependencyGroup }) {
       <CardHeader className="pb-3">
         <div className="flex flex-wrap items-center gap-2">
           <CardTitle className="font-mono text-sm font-bold">{group.depName}</CardTitle>
-          <Badge variant="secondary">{projectCount} projects</Badge>
-          <Badge variant="secondary">
-            {group.versions.length} version{group.versions.length === 1 ? '' : 's'}
-          </Badge>
+          <Badge variant="secondary">{pluralize(projectCount, 'project', 'projects')}</Badge>
+          <Badge variant="secondary">{pluralize(group.versions.length, 'version', 'versions')}</Badge>
           {drift && (
             <Badge
               variant="outline"
@@ -32,6 +37,11 @@ export function DependencyGroupCard({ group }: { group: DependencyGroup }) {
             <Badge variant="outline" className="font-mono">
               {version.versionRange}
             </Badge>
+            {version.depTypes.map((depType) => (
+              <Badge key={depType} variant="secondary" className="text-xs">
+                {DEP_TYPE_LABELS[depType] ?? depType}
+              </Badge>
+            ))}
             <div className="flex flex-wrap gap-1">
               {version.projects.map((project) => (
                 <Badge

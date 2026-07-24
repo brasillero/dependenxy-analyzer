@@ -119,4 +119,15 @@ describe('groupDependencies', () => {
     const groups = groupDependencies(entries);
     expect(groups[0].depName).toBe('common');
   });
+
+  it('sorts drifted groups first even with fewer projects, count as tiebreak (RF-09.1 + §4.5)', () => {
+    const entries = flattenDependencies([
+      { repo: repo('a'), files: [pkg('package.json', { dependencies: { drifted: '^1.0.0', common: '^2.0.0' } })] },
+      { repo: repo('b'), files: [pkg('package.json', { dependencies: { drifted: '^2.0.0', common: '^2.0.0' } })] },
+      { repo: repo('c'), files: [pkg('package.json', { dependencies: { common: '^2.0.0' } })] },
+    ]);
+    const groups = groupDependencies(entries);
+    expect(groups[0].depName).toBe('drifted');
+    expect(groups[1].depName).toBe('common');
+  });
 });

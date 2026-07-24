@@ -37,7 +37,8 @@ export function hasDrift(group: DependencyGroup): boolean {
  * Group dependency -> versionRange -> projects (RN-08.3). Projects are keyed
  * by (repoId, packagePath), so a monorepo's packages count individually.
  * Ranges are compared as raw strings — deliberate literal divergence (§4.1).
- * Groups are sorted by total project count, descending.
+ * Groups are sorted drift-first (RF-09.1 business priority), with total
+ * project count descending as the tiebreak (§4.5).
  */
 export function groupDependencies(entries: DependencyEntry[]): DependencyGroup[] {
   const byDep = new Map<
@@ -78,10 +79,7 @@ export function groupDependencies(entries: DependencyEntry[]): DependencyGroup[]
       .sort((a, b) => b.projects.length - a.projects.length),
   }));
 
-  groups.sort(
-    (a, b) =>
-      b.versions.reduce((n, v) => n + v.projects.length, 0) -
-      a.versions.reduce((n, v) => n + v.projects.length, 0),
-  );
+  const projectCount = (g: DependencyGroup) => g.versions.reduce((n, v) => n + v.projects.length, 0);
+  groups.sort((a, b) => Number(hasDrift(b)) - Number(hasDrift(a)) || projectCount(b) - projectCount(a));
   return groups;
 }
