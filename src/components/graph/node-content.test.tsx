@@ -35,7 +35,7 @@ const packageData: PackageNodeData = {
 describe('RepoNodeContent', () => {
   it('renders label and branch with the accent border color', () => {
     const { container } = render(
-      <RepoNodeContent data={{ label: 'acme/a', branch: 'main', color: '#2563eb' }} />,
+      <RepoNodeContent data={{ repoId: 'r1', label: 'acme/a', branch: 'main', color: '#2563eb' }} />,
     );
     expect(screen.getByText('acme/a')).toBeInTheDocument();
     expect(screen.getByText(/main/)).toBeInTheDocument();

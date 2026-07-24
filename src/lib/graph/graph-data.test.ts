@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildGraphData, filterSharedOnly, REPO_COLORS } from './graph-data';
+import { buildGraphData, filterSharedOnly, repoDependencies, REPO_COLORS } from './graph-data';
 import type { DependencyGroup, RepoConfig } from '@/lib/types';
 
 const repos: RepoConfig[] = [
@@ -38,8 +38,8 @@ describe('buildGraphData', () => {
 
   it('repo node data carries label and effective branch', () => {
     const { repoNodes } = buildGraphData(groups, repos);
-    expect(repoNodes[0].data).toMatchObject({ label: 'acme/a', branch: 'main' });
-    expect(repoNodes[1].data).toMatchObject({ label: 'acme/b', branch: 'develop' });
+    expect(repoNodes[0].data).toMatchObject({ repoId: 'r1', label: 'acme/a', branch: 'main' });
+    expect(repoNodes[1].data).toMatchObject({ repoId: 'r2', label: 'acme/b', branch: 'develop' });
   });
 
   it('creates package nodes with pkg_ prefix, isShared and hasVersionDrift flags', () => {
@@ -134,5 +134,21 @@ describe('filterSharedOnly', () => {
     expect(filtered.packageNodes.map((n) => n.id)).toEqual(['pkg_react']);
     expect(filtered.repoNodes).toHaveLength(2);
     expect(filtered.edges.every((e) => e.target === 'pkg_react')).toBe(true);
+  });
+});
+
+describe('repoDependencies', () => {
+  it('lists every declaration of the given repo with drift flags, sorted', () => {
+    const data = buildGraphData(groups, repos);
+    const rows = repoDependencies(data, 'r2');
+    expect(rows.map((r) => r.packageName)).toEqual(['react', 'react']);
+    expect(rows).toHaveLength(2);
+    expect(rows.every((r) => r.hasVersionDrift)).toBe(true);
+    const legacy = rows.find((r) => r.packagePath === 'packages/legacy/package.json')!;
+    expect(legacy.version).toBe('^17.0.2');
+  });
+
+  it('returns an empty list for an unknown repo id', () => {
+    expect(repoDependencies(buildGraphData(groups, repos), 'ghost')).toEqual([]);
   });
 });

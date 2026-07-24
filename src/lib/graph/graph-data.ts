@@ -18,6 +18,7 @@ export function repoColorFor(index: number): string {
 }
 
 export interface RepoNodeData extends Record<string, unknown> {
+  repoId: string;
   label: string;
   branch: string;
   color: string;
@@ -81,6 +82,7 @@ export function buildGraphData(groups: DependencyGroup[], repos: RepoConfig[]): 
     id: `repo_${repo.id}`,
     type: 'repo',
     data: {
+      repoId: repo.id,
       label: repo.displayName,
       branch: effectiveBranch(repo) ?? '',
       color: repoColorFor(index),
@@ -161,4 +163,31 @@ export function filterSharedOnly(data: GraphData): GraphData {
     packageNodes,
     edges: data.edges.filter((edge) => keep.has(edge.target)),
   };
+}
+
+export interface RepoDependencyRow {
+  packageName: string;
+  packagePath: string;
+  version: string;
+  hasVersionDrift: boolean;
+}
+
+/** All dependency declarations of one repo, sorted by package name then path. */
+export function repoDependencies(data: GraphData, repoId: string): RepoDependencyRow[] {
+  const rows: RepoDependencyRow[] = [];
+  for (const node of data.packageNodes) {
+    for (const version of node.data.versions) {
+      if (version.repoId === repoId) {
+        rows.push({
+          packageName: node.data.packageName,
+          packagePath: version.packagePath,
+          version: version.version,
+          hasVersionDrift: node.data.hasVersionDrift,
+        });
+      }
+    }
+  }
+  return rows.sort(
+    (a, b) => a.packageName.localeCompare(b.packageName) || a.packagePath.localeCompare(b.packagePath),
+  );
 }
