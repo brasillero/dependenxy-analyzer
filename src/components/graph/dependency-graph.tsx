@@ -12,6 +12,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { Checkbox } from '@/components/ui/checkbox';
+import { buildFlowNodes } from '@/lib/graph/flow-nodes';
 import {
   buildGraphData,
   filterSharedOnly,
@@ -44,6 +45,9 @@ export function DependencyGraph({ groups, repos }: Props) {
   const [dragOverrides, setDragOverrides] = useState<ReadonlyMap<string, { x: number; y: number }>>(
     new Map(),
   );
+  // Identity cache for buildFlowNodes — preserves React Flow's measured state.
+  // Held in state (never set) because refs may not be read during render.
+  const [nodeCache] = useState(() => new Map<string, Node>());
 
   const graphData = useMemo(() => {
     const full = buildGraphData(groups, repos);
@@ -75,14 +79,10 @@ export function DependencyGraph({ groups, repos }: Props) {
       [...graphData.repoNodes, ...graphData.packageNodes].map((node) => node.id),
     );
     const activeOverrides = new Map([...dragOverrides].filter(([id]) => currentIds.has(id)));
-    return [...graphData.repoNodes, ...graphData.packageNodes].map((node) => ({
-      id: node.id,
-      type: node.type,
-      position: activeOverrides.get(node.id) ?? positions.get(node.id) ?? { x: 0, y: 0 },
-      data: node.data,
-      style: highlight && !highlight.nodeIds.has(node.id) ? { opacity: DIMMED_OPACITY } : undefined,
-    }));
-  }, [graphData, positions, dragOverrides, highlight]);
+    // Identity-preserving build: React Flow drops a node's measured dimensions
+    // whenever its object identity changes, so untouched nodes must be reused.
+    return buildFlowNodes(graphData, positions, activeOverrides, highlight, nodeCache);
+  }, [graphData, positions, dragOverrides, highlight, nodeCache]);
 
   const edges: Edge[] = useMemo(
     () =>
@@ -106,7 +106,11 @@ export function DependencyGraph({ groups, repos }: Props) {
       for (const change of changes) {
         // Non-position changes (dimensions, select) are intentionally ignored:
         // selection is managed externally and React Flow keeps its own measurements.
-        if (change.type === 'position' && change.position) {
+        // Intermediate drag positions are ignored too — React Flow drives the
+        // visual drag internally; committing every pointermove would rebuild the
+        // nodes array each frame and blank the graph (fresh identities lose
+        // their measured state). Only the final drop position is committed.
+        if (change.type === 'position' && change.position && change.dragging === false) {
           next ??= new Map(prev);
           next.set(change.id, change.position);
         }
