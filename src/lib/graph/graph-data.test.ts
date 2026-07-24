@@ -107,6 +107,25 @@ describe('buildGraphData', () => {
     expect(repoNodes).toHaveLength(2);
     expect(react.data.isShared).toBe(false); // only one surviving project
   });
+
+  it('emits no package node when every project of a group is a ghost repo', () => {
+    const allGhostGroups: DependencyGroup[] = [
+      {
+        depName: 'react',
+        versions: [
+          {
+            versionRange: '^18.2.0',
+            depTypes: ['dependencies'],
+            projects: [project('ghost1', 'acme/gone'), project('ghost2', 'acme/alsogone')],
+          },
+        ],
+      },
+    ];
+    const { repoNodes, packageNodes, edges } = buildGraphData(allGhostGroups, repos);
+    expect(packageNodes).toHaveLength(0);
+    expect(edges).toHaveLength(0);
+    expect(repoNodes).toHaveLength(2);
+  });
 });
 
 describe('filterSharedOnly', () => {

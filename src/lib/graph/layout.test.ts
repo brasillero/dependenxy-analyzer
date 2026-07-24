@@ -47,4 +47,40 @@ describe('computeLayout', () => {
       expect(Number.isFinite(pos.x)).toBe(true);
     }
   });
+
+  it('keeps two package nodes on the same repo well separated (per-type collide radius)', () => {
+    const typedNodes = [
+      { id: 'repo_a', type: 'repo' as const },
+      { id: 'pkg_1', type: 'package' as const },
+      { id: 'pkg_2', type: 'package' as const },
+    ];
+    const typedLinks = [
+      { source: 'repo_a', target: 'pkg_1' },
+      { source: 'repo_a', target: 'pkg_2' },
+    ];
+    const positions = computeLayout(typedNodes, typedLinks, WIDTH, HEIGHT);
+    const a = positions.get('pkg_1')!;
+    const b = positions.get('pkg_2')!;
+    // Observed: exactly 240px (120 + 120 radii fully satisfied); 200 leaves margin.
+    expect(Math.hypot(a.x - b.x, a.y - b.y)).toBeGreaterThanOrEqual(200);
+  });
+
+  it('is deterministic: same input yields identical positions', () => {
+    const first = computeLayout(nodes, links, WIDTH, HEIGHT);
+    const second = computeLayout(nodes, links, WIDTH, HEIGHT);
+    expect(first).toEqual(second);
+  });
+
+  it('ignores links referencing unknown node ids instead of throwing', () => {
+    const positions = computeLayout(
+      [{ id: 'a' }, { id: 'b' }],
+      [{ source: 'a', target: 'b' }, { source: 'a', target: 'ghost' }],
+      WIDTH,
+      HEIGHT,
+    );
+    expect(positions.size).toBe(2);
+    for (const [, pos] of positions) {
+      expect(Number.isFinite(pos.x)).toBe(true);
+    }
+  });
 });
