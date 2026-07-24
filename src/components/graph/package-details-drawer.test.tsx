@@ -43,6 +43,11 @@ describe('PackageDetailsDrawer', () => {
     expect(screen.getByText('divergent')).toBeInTheDocument();
   });
 
+  it('shows the count of distinct versions in the header', () => {
+    render(<PackageDetailsDrawer packageData={drifted} onClose={() => {}} />);
+    expect(screen.getByText('2 versions')).toBeInTheDocument();
+  });
+
   it('shows aligned status when there is no drift', () => {
     const aligned: PackageNodeData = {
       ...drifted,
@@ -52,5 +57,6 @@ describe('PackageDetailsDrawer', () => {
     render(<PackageDetailsDrawer packageData={aligned} onClose={() => {}} />);
     expect(screen.getByText('aligned')).toBeInTheDocument();
     expect(screen.getByText(/same version range/i)).toBeInTheDocument();
+    expect(screen.getByText('1 version')).toBeInTheDocument();
   });
 });
