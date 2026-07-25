@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildGraphData, filterSharedOnly, repoDependencies, REPO_COLORS } from './graph-data';
+import { buildGraphData, filterSharedOnly, repoDependencies, repoColorFor } from './graph-data';
 import type { DependencyGroup, RepoConfig } from '@/lib/types';
 
 const repos: RepoConfig[] = [
@@ -31,8 +31,8 @@ describe('buildGraphData', () => {
   it('creates one repo node per repo with repo_ id prefix and distinct colors', () => {
     const { repoNodes } = buildGraphData(groups, repos);
     expect(repoNodes.map((n) => n.id)).toEqual(['repo_r1', 'repo_r2']);
-    expect(repoNodes[0].data.color).toBe(REPO_COLORS[0]);
-    expect(repoNodes[1].data.color).toBe(REPO_COLORS[1]);
+    expect(repoNodes[0].data.color).toBe(repoColorFor('r1'));
+    expect(repoNodes[1].data.color).toBe(repoColorFor('r2'));
     expect(repoNodes[0].data.color).not.toBe(repoNodes[1].data.color);
   });
 
@@ -65,7 +65,7 @@ describe('buildGraphData', () => {
     });
     const majority = react.data.versions.find((v) => v.repoId === 'r1')!;
     expect(majority.status).toBe('majority'); // first version group (most projects)
-    expect(majority.repoColor).toBe(REPO_COLORS[0]);
+    expect(majority.repoColor).toBe(repoColorFor('r1'));
     const lodash = packageNodes.find((n) => n.id === 'pkg_lodash')!;
     expect(lodash.data.versions[0].status).toBe('aligned'); // no drift
   });
@@ -76,8 +76,8 @@ describe('buildGraphData', () => {
     const reactEdges = edges.filter((e) => e.target === 'pkg_react');
     expect(reactEdges).toHaveLength(2);
     expect(reactEdges.map((e) => e.source).sort()).toEqual(['repo_r1', 'repo_r2']);
-    expect(reactEdges.find((e) => e.source === 'repo_r1')!.stroke).toBe(REPO_COLORS[0]);
-    expect(reactEdges.find((e) => e.source === 'repo_r2')!.stroke).toBe(REPO_COLORS[1]);
+    expect(reactEdges.find((e) => e.source === 'repo_r1')!.stroke).toBe(repoColorFor('r1'));
+    expect(reactEdges.find((e) => e.source === 'repo_r2')!.stroke).toBe(repoColorFor('r2'));
     // ids are unique:
     expect(new Set(edges.map((e) => e.id)).size).toBe(edges.length);
   });
@@ -150,5 +150,17 @@ describe('repoDependencies', () => {
 
   it('returns an empty list for an unknown repo id', () => {
     expect(repoDependencies(buildGraphData(groups, repos), 'ghost')).toEqual([]);
+  });
+});
+
+describe('repoColorFor', () => {
+  it('is deterministic and produces distinct hsl colors per repo id', () => {
+    const a1 = repoColorFor('r1');
+    expect(a1).toBe(repoColorFor('r1'));
+    expect(a1).toMatch(/^hsl\(\d+ 65% 45%\)$/);
+    const ids = Array.from({ length: 20 }, (_, i) => `repo-${i}`);
+    const colors = new Set(ids.map(repoColorFor));
+    // unbounded palette: 20 repos must not collapse onto a tiny set
+    expect(colors.size).toBeGreaterThan(12);
   });
 });

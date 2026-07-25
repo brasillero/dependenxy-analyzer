@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { githubProvider } from '@/lib/providers/github';
@@ -18,7 +18,7 @@ function parseRepoUrl(url: string) {
   return url.includes('github.com') ? githubProvider.parseUrl(url) : gitlabProvider.parseUrl(url);
 }
 
-export function AddRepoForm() {
+export function AddRepoForm({ onAdded }: { onAdded?: () => void }) {
   const [url, setUrl] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
@@ -60,6 +60,7 @@ export function AddRepoForm() {
       selectRepo(existing.id);
       setUrl('');
       toast.info('Repository already added — selected it.');
+      onAdded?.();
       return;
     }
 
@@ -70,6 +71,7 @@ export function AddRepoForm() {
       const id = addRepo({ ...draft, defaultBranch });
       selectRepo(id);
       setUrl('');
+      onAdded?.();
     } catch (apiError) {
       toast.error(describeError(apiError));
     } finally {

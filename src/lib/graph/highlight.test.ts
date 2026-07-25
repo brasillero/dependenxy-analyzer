@@ -38,29 +38,35 @@ const data = buildGraphData(groups, repos);
 
 describe('computeHighlight', () => {
   it('returns null without a selection', () => {
-    expect(computeHighlight(data, null)).toBeNull();
+    expect(computeHighlight(data, [])).toBeNull();
   });
 
-  it('returns null for a node id not present in the graph (stale selection)', () => {
-    expect(computeHighlight(data, 'pkg_ghost')).toBeNull();
-    expect(computeHighlight(data, 'repo_ghost')).toBeNull();
+  it('returns null for node ids not present in the graph (stale selection)', () => {
+    expect(computeHighlight(data, ['pkg_ghost'])).toBeNull();
+    expect(computeHighlight(data, ['repo_ghost'])).toBeNull();
   });
 
   it('selecting a repo highlights its packages and connecting edges', () => {
-    const highlight = computeHighlight(data, 'repo_r1')!;
+    const highlight = computeHighlight(data, ['repo_r1'])!;
     expect(highlight.nodeIds).toEqual(new Set(['repo_r1', 'pkg_react', 'pkg_lodash']));
     expect(highlight.edgeIds).toEqual(new Set(['e_r1_react', 'e_r1_lodash']));
   });
 
   it('selecting a package highlights its parent repos and connecting edges', () => {
-    const highlight = computeHighlight(data, 'pkg_react')!;
+    const highlight = computeHighlight(data, ['pkg_react'])!;
     expect(highlight.nodeIds).toEqual(new Set(['pkg_react', 'repo_r1', 'repo_r2']));
     expect(highlight.edgeIds).toEqual(new Set(['e_r1_react', 'e_r2_react']));
   });
 
   it('selecting a unique package highlights only itself, its repo and one edge', () => {
-    const highlight = computeHighlight(data, 'pkg_lodash')!;
+    const highlight = computeHighlight(data, ['pkg_lodash'])!;
     expect(highlight.nodeIds).toEqual(new Set(['pkg_lodash', 'repo_r1']));
     expect(highlight.edgeIds).toEqual(new Set(['e_r1_lodash']));
+  });
+
+  it('unions neighborhoods for multi-selection', () => {
+    const highlight = computeHighlight(data, ['pkg_lodash', 'repo_r2'])!;
+    expect(highlight.nodeIds).toEqual(new Set(['pkg_lodash', 'repo_r1', 'repo_r2', 'pkg_react']));
+    expect(highlight.edgeIds).toEqual(new Set(['e_r1_lodash', 'e_r2_react']));
   });
 });

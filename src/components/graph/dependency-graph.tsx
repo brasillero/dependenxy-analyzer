@@ -4,10 +4,11 @@ import { useCallback, useMemo, useState } from 'react';
 import {
   Background,
   Controls,
+  Panel,
   ReactFlow,
   type Edge,
   type Node,
-  type NodeMouseHandler,
+  type NodeChange,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -19,7 +20,13 @@ import {
 } from '@/lib/graph/graph-data';
 import { computeHighlight } from '@/lib/graph/highlight';
 import { computeLayout } from '@/lib/graph/layout';
-import type { DependencyGroup, RepoConfig } from '@/lib/types';
+import type { DependencyGroup } from '@/lib/types';
+import { useRepoStore } from '@/stores/repo-store';
+import { useSettingsStore } from '@/stores/settings-store';
+import { useViewStore } from '@/stores/view-store';
+import { RepoListPanel } from '@/components/panels/repo-list-panel';
+import { ToolsPanel } from '@/components/panels/tools-panel';
+import { AnalysisBanner } from '@/components/analysis-banner';
 import { PackageDetailsDrawer } from './package-details-drawer';
 import { PackageNode } from './package-node';
 import { RepoDetailsDrawer } from './repo-details-drawer';
@@ -27,25 +34,40 @@ import { RepoNode } from './repo-node';
 
 const nodeTypes = { repo: RepoNode, package: PackageNode };
 
-const DIMMED_OPACITY = 0.2;
+const DIMMED_OPACITY = 0.5;
 
-interface Props {
-  groups: DependencyGroup[];
-  repos: RepoConfig[];
+/** Drop version entries whose dep types are all disabled by the header toggles. */
+function filterGroupsByDepTypes(
+  groups: DependencyGroup[],
+  enabled: Record<DependencyGroup['versions'][number]['depTypes'][number], boolean>,
+): DependencyGroup[] {
+  return groups
+    .map((group) => ({
+      ...group,
+      versions: group.versions.filter((version) => version.depTypes.some((t) => enabled[t])),
+    }))
+    .filter((group) => group.versions.length > 0);
 }
 
-export function DependencyGraph({ groups, repos }: Props) {
+export function DependencyGraph() {
+  const analysis = useViewStore((s) => s.analysis);
+  const repos = useRepoStore((s) => s.repos);
+  const enabledDepTypes = useSettingsStore((s) => s.enabledDepTypes);
+
   const [sharedOnly, setSharedOnly] = useState(false);
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(new Set());
   const [selectedPackage, setSelectedPackage] = useState<PackageNodeData | null>(null);
   const [selectedRepo, setSelectedRepo] = useState<RepoNodeData | null>(null);
 
-  const graphData = useMemo(() => {
-    const full = buildGraphData(groups, repos);
-    return sharedOnly ? filterSharedOnly(full) : full;
-  }, [groups, repos, sharedOnly]);
+  const analyzedRepos = useMemo(() => repos, [repos]);
 
-  // Layout recomputes only when the graph's data changes (filter toggle, new analysis).
+  const graphData = useMemo(() => {
+    if (!analysis) return buildGraphData([], []);
+    const filtered = filterGroupsByDepTypes(analysis, enabledDepTypes);
+    const full = buildGraphData(filtered, analyzedRepos);
+    return sharedOnly ? filterSharedOnly(full) : full;
+  }, [analysis, analyzedRepos, enabledDepTypes, sharedOnly]);
+
   const positions = useMemo(
     () =>
       computeLayout(
@@ -59,9 +81,29 @@ export function DependencyGraph({ groups, repos }: Props) {
   );
 
   const highlight = useMemo(
-    () => computeHighlight(graphData, selectedNodeId),
-    [graphData, selectedNodeId],
+    () => computeHighlight(graphData, [...selectedIds]),
+    [graphData, selectedIds],
   );
+
+  // Selection is driven by React Flow's native model: the library emits
+  // select changes (click, shift-click, selection box, pane click, Escape)
+  // and we mirror them into state — multi-select stays native behavior.
+  const onNodesChange = useCallback((changes: NodeChange[]) => {
+    setSelectedIds((prev) => {
+      let next: Set<string> | null = null;
+      for (const change of changes) {
+        if (change.type === 'select') {
+          next ??= new Set(prev);
+          if (change.selected) {
+            next.add(change.id);
+          } else {
+            next.delete(change.id);
+          }
+        }
+      }
+      return next ?? prev;
+    });
+  }, []);
 
   const nodes: Node[] = useMemo(
     () =>
@@ -69,10 +111,14 @@ export function DependencyGraph({ groups, repos }: Props) {
         id: node.id,
         type: node.type,
         position: positions.get(node.id) ?? { x: 0, y: 0 },
-        data: node.data,
+        selected: selectedIds.has(node.id),
+        data:
+          node.type === 'repo'
+            ? { ...node.data, onOpenDetails: () => setSelectedRepo(node.data as RepoNodeData) }
+            : { ...node.data, onOpenDetails: () => setSelectedPackage(node.data as PackageNodeData) },
         style: highlight && !highlight.nodeIds.has(node.id) ? { opacity: DIMMED_OPACITY } : undefined,
       })),
-    [graphData, positions, highlight],
+    [graphData, positions, selectedIds, highlight],
   );
 
   const edges: Edge[] = useMemo(
@@ -91,53 +137,60 @@ export function DependencyGraph({ groups, repos }: Props) {
     [graphData, highlight],
   );
 
-  const handleNodeClick: NodeMouseHandler = useCallback((_, node) => {
-    if (node.type === 'repo' || node.type === 'package') {
-      setSelectedNodeId((current) => (current === node.id ? null : node.id));
-    }
+  const handlePanelSelect = useCallback((nodeId: string | null) => {
+    setSelectedIds(nodeId ? new Set([nodeId]) : new Set());
   }, []);
 
-  const handleNodeDoubleClick: NodeMouseHandler = useCallback((_, node) => {
-    if (node.type === 'package') {
-      setSelectedPackage(node.data as PackageNodeData);
-    } else if (node.type === 'repo') {
-      setSelectedRepo(node.data as RepoNodeData);
-    }
-    if (node.type === 'package' || node.type === 'repo') {
-      // Deterministic end state: a double click fires onNodeClick twice first
-      // (select → deselect); pin the selection so the highlight always matches
-      // what the open drawer is showing.
-      setSelectedNodeId(node.id);
-    }
-  }, []);
-
-  const handlePaneClick = useCallback(() => setSelectedNodeId(null), []);
+  const listSelectedNodeId = useMemo(() => {
+    if (selectedIds.size !== 1) return null;
+    const [only] = selectedIds;
+    return only.startsWith('repo_') ? only : null;
+  }, [selectedIds]);
 
   return (
-    <div className="relative h-[calc(100vh-10rem)] w-full rounded-md border">
-      <div className="absolute left-3 top-3 z-10 flex items-center gap-1.5 rounded-md border bg-card px-3 py-1.5">
-        <Checkbox
-          id="graph-shared-only"
-          checked={sharedOnly}
-          onCheckedChange={(value) => setSharedOnly(value === true)}
-          aria-label="Show shared only"
-        />
-        <label htmlFor="graph-shared-only" className="cursor-pointer text-sm">
-          Show shared only
-        </label>
-      </div>
+    <div className="relative h-full w-full">
       <ReactFlow
+        key={analysis ? 'analysis' : 'idle'}
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
         fitView
         nodesDraggable={false}
-        onNodeClick={handleNodeClick}
-        onNodeDoubleClick={handleNodeDoubleClick}
-        onPaneClick={handlePaneClick}
+        onNodesChange={onNodesChange}
       >
         <Background />
         <Controls />
+        <Panel position="top-left">
+          <ToolsPanel />
+        </Panel>
+        <Panel position="top-right">
+          <RepoListPanel selectedNodeId={listSelectedNodeId} onSelect={handlePanelSelect} />
+        </Panel>
+        <Panel position="top-center">
+          <div className="flex items-center gap-1.5 rounded-md border bg-card px-3 py-1.5 shadow-sm">
+            <Checkbox
+              id="graph-shared-only"
+              checked={sharedOnly}
+              onCheckedChange={(value) => setSharedOnly(value === true)}
+              aria-label="Show shared only"
+            />
+            <label htmlFor="graph-shared-only" className="cursor-pointer text-sm">
+              Show shared only
+            </label>
+          </div>
+        </Panel>
+        {!analysis && (
+          <Panel position="top-center" className="mt-24">
+            <div className="max-w-sm rounded-md border bg-card p-4 text-center text-sm text-muted-foreground shadow-sm">
+              <p className="font-medium text-foreground">No analysis yet</p>
+              <p className="mt-1">
+                Add your access tokens, register repositories, then click{' '}
+                <span className="font-medium">Analyze</span> to explore dependencies on this canvas.
+              </p>
+            </div>
+          </Panel>
+        )}
+        <AnalysisBanner />
       </ReactFlow>
       <PackageDetailsDrawer
         packageData={selectedPackage}

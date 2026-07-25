@@ -1,20 +1,20 @@
 import type { DependencyGroup, RepoConfig } from '@/lib/types';
 import { effectiveBranch } from '@/lib/package-files';
 
-/** Distinct accent colors assigned to repos by index (graph-only; not theme tokens). */
-export const REPO_COLORS = [
-  '#2563eb',
-  '#d97706',
-  '#059669',
-  '#dc2626',
-  '#7c3aed',
-  '#0891b2',
-  '#db2777',
-  '#65a30d',
-];
-
-export function repoColorFor(index: number): string {
-  return REPO_COLORS[index % REPO_COLORS.length];
+/**
+ * Deterministic accent color per repo, with no palette cap: the repo id is
+ * hashed (FNV-1a) and spread across the hue wheel; saturation/lightness are
+ * fixed for readability on the card background. Same id → same color,
+ * different ids → well-separated hues.
+ */
+export function repoColorFor(repoId: string): string {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < repoId.length; i += 1) {
+    hash ^= repoId.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  const hue = ((hash >>> 0) * 137.508) % 360; // golden-angle spread
+  return `hsl(${Math.round(hue)} 65% 45%)`;
 }
 
 export interface RepoNodeData extends Record<string, unknown> {
@@ -74,18 +74,18 @@ export interface GraphData {
  * Edges go repo -> package, stroke = repo accent color, deduped per repo-dep pair.
  */
 export function buildGraphData(groups: DependencyGroup[], repos: RepoConfig[]): GraphData {
-  const colorByRepoId = new Map(repos.map((repo, index) => [repo.id, repoColorFor(index)]));
+  const colorByRepoId = new Map(repos.map((repo) => [repo.id, repoColorFor(repo.id)]));
   const branchByRepoId = new Map(repos.map((repo) => [repo.id, effectiveBranch(repo) ?? '']));
   const knownRepoIds = new Set(repos.map((repo) => repo.id));
 
-  const repoNodes: GraphRepoNode[] = repos.map((repo, index) => ({
+  const repoNodes: GraphRepoNode[] = repos.map((repo) => ({
     id: `repo_${repo.id}`,
     type: 'repo',
     data: {
       repoId: repo.id,
       label: repo.displayName,
       branch: effectiveBranch(repo) ?? '',
-      color: repoColorFor(index),
+      color: repoColorFor(repo.id),
     },
   }));
 

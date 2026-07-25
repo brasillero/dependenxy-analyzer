@@ -1,18 +1,41 @@
 import { Handle, Position, type Node, type NodeProps } from '@xyflow/react';
+import { TableIcon } from '@/components/icons';
 import type { RepoNodeData } from '@/lib/graph/graph-data';
 
 type RepoFlowNode = Node<RepoNodeData, 'repo'>;
 
 /** Pure presentational content (unit-tested directly). */
-export function RepoNodeContent({ data }: { data: RepoNodeData }) {
+export function RepoNodeContent({
+  data,
+  onOpenDetails,
+}: {
+  data: RepoNodeData;
+  onOpenDetails?: () => void;
+}) {
   return (
     <div
       className="rounded-md border-2 bg-card px-4 py-2 shadow-sm"
       style={{ borderColor: data.color }}
     >
-      <p className="max-w-56 truncate font-mono text-sm font-medium" title={data.label}>
-        {data.label}
-      </p>
+      <div className="flex items-center gap-2">
+        <p className="max-w-56 truncate font-mono text-sm font-medium" title={data.label}>
+          {data.label}
+        </p>
+        {onOpenDetails && (
+          <button
+            type="button"
+            aria-label={`Dependencies of ${data.label}`}
+            title="Open dependency list"
+            onClick={(event) => {
+              event.stopPropagation();
+              onOpenDetails();
+            }}
+            className="nodrag shrink-0 text-muted-foreground hover:text-foreground"
+          >
+            <TableIcon className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
       <p className="text-xs text-muted-foreground">on {data.branch}</p>
     </div>
   );
@@ -31,7 +54,14 @@ export function RepoNode({ data }: NodeProps<RepoFlowNode>) {
         style={{ top: '50%', left: '50%', right: 'auto', transform: 'translate(-50%, -50%)' }}
         isConnectable={false}
       />
-      <RepoNodeContent data={data} />
+      <RepoNodeContent
+        data={data}
+        onOpenDetails={
+          typeof data.onOpenDetails === 'function'
+            ? () => (data.onOpenDetails as () => void)()
+            : undefined
+        }
+      />
     </>
   );
 }

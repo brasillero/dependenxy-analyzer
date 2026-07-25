@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Repository Dependency Analyzer — Next-Gen Specification</title>
+<style>
+  :root {
+    --bg: #fafaf9;
+    --surface: #ffffff;
+    --border: #e7e5e4;
+    --text: #1c1917;
+    --muted: #78716c;
+    --amber-bg: #fef3c7;
+    --amber-text: #b45309;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+  }
+  .layout { display: flex; max-width: 1200px; margin: 0 auto; }
+  nav {
+    width: 240px; flex-shrink: 0; padding: 2rem 1.25rem;
+    position: sticky; top: 0; height: 100vh; overflow-y: auto;
+    border-right: 1px solid var(--border);
+    font-size: 0.85rem;
+  }
+  nav .nav-title { font-weight: 600; margin-bottom: 1rem; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+  nav a { display: block; padding: 0.3rem 0; color: var(--muted); text-decoration: none; }
+  nav a:hover { color: var(--text); }
+  main { flex: 1; padding: 2.5rem 3rem; max-width: 860px; }
+  h1 { font-size: 1.75rem; font-weight: 700; margin-bottom: 0.5rem; }
+  .subtitle { color: var(--muted); font-size: 1.05rem; margin-bottom: 1.5rem; }
+  .spec-tag {
+    display: inline-block; font-size: 0.75rem; font-weight: 600;
+    background: var(--text); color: var(--bg); border-radius: 999px;
+    padding: 0.2rem 0.8rem; margin-bottom: 2.5rem; letter-spacing: 0.03em;
+  }
+  h2 { font-size: 1.25rem; font-weight: 650; margin: 2.5rem 0 1rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
+  h2:first-of-type { border-top: none; padding-top: 0; }
+  h3 { font-size: 0.95rem; font-weight: 600; margin: 1.5rem 0 0.5rem; }
+  p { margin-bottom: 0.75rem; }
+  ul, ol { margin: 0.5rem 0 1rem 1.5rem; }
+  li { margin-bottom: 0.35rem; }
+  code {
+    font-family: var(--mono); font-size: 0.85em;
+    background: #f5f5f4; border: 1px solid var(--border);
+    border-radius: 4px; padding: 0.1em 0.35em;
+  }
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 1.25rem 1.5rem; margin-bottom: 1rem;
+  }
+  .badge {
+    display: inline-block; font-family: var(--mono); font-size: 0.7rem;
+    border: 1px solid var(--border); border-radius: 999px;
+    padding: 0.1rem 0.55rem; margin-right: 0.3rem; background: #f5f5f4;
+  }
+  .badge.amber { background: var(--amber-bg); border-color: #f59e0b66; color: var(--amber-text); }
+  .badge.strong { background: var(--text); color: var(--bg); border-color: var(--text); }
+  table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.88rem; }
+  th { text-align: left; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border); }
+  td { padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .pkg-card { border-left: 3px solid var(--text); }
+  .pkg-card h3 { margin-top: 0; }
+  .pkg-card.trio { border-left: 3px solid var(--amber-text); }
+  .note { background: #f5f5f4; border: 1px solid var(--border); border-radius: 8px; padding: 0.85rem 1.1rem; font-size: 0.88rem; color: var(--muted); margin: 1rem 0; }
+  .note strong { color: var(--text); }
+  .flow { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; margin: 1rem 0; font-family: var(--mono); font-size: 0.78rem; }
+  .flow .step { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 0.35rem 0.65rem; }
+  .flow .arrow { color: var(--muted); }
+  .dim { color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="layout">
+  <nav>
+    <div class="nav-title">Contents</div>
+    <a href="#what">What is RDA</a>
+    <a href="#delta">Changes vs v1</a>
+    <a href="#flow">End-to-end flow</a>
+    <a href="#tokens">Access tokens</a>
+    <a href="#repos">Repository management</a>
+    <a href="#branches">Branch selection</a>
+    <a href="#panel">Dependency panel</a>
+    <a href="#analyze">Cross-repo analysis</a>
+    <a href="#graph">Graph view</a>
+    <a href="#resilience">Failure handling</a>
+    <a href="#architecture">Architecture</a>
+    <a href="#packages">Packages</a>
+    <a href="#limits">Known limits</a>
+  </nav>
+  <main>
+    <h1>Repository Dependency Analyzer</h1>
+    <p class="subtitle">Next-generation specification — an internal web tool that reads the <code>package.json</code> files of many Git repositories — monorepos included — and consolidates every declared dependency into a single interactive graph, with explicit detection of <strong>version drift</strong>: the same package pinned to different version ranges in different projects.</p>
+    <span class="spec-tag">DRAFT SPEC — next-gen, new repository</span>
+
+    <h2 id="what">What is RDA</h2>
+    <p>RDA answers two questions in seconds: <em>"which dependencies does this repository declare?"</em> and <em>"which projects use this dependency, and on which versions?"</em>. It works against <strong>GitHub</strong> and <strong>GitLab</strong> (including self-hosted instances), reads <em>every</em> <code>package.json</code> in a repository — not just the root one — and presents the result as an interactive graph of repositories and packages. <strong>The graph is the only view, by design.</strong></p>
+    <p>There is <strong>no backend database</strong>: access tokens live only in memory during the session, and the only thing persisted is the repository list (provider, host, path, branch) in the browser's <code>localStorage</code>. All communication with Git providers flows through server-side proxy routes inside the same Next.js app, which avoids CORS issues and keeps token handling centralized.</p>
+
+    <h2 id="delta">Changes vs v1</h2>
+    <div class="note">
+      <ul>
+        <li><strong>Graph-only UI.</strong> The dependency list/panel stage is gone from the critical path — analysis results exist as the graph and nothing else.</li>
+        <li><strong>Canvas-first UI.</strong> The header+sidebar chrome is gone too: the graph canvas fills the app, with floating React Flow <code>Panel</code>s for tools (add repository, manage tokens) and for the repository list.</li>
+        <li><strong>Highlight rides React Flow's native selection.</strong> Click-to-highlight uses the library's built-in selection model (<code>selected</code> node property, <code>onSelectionChange</code>, native shift-click multi-select) instead of custom click state — the list panel constrains itself to single selection, the canvas keeps native multi-selection.</li>
+        <li><strong>Detail sheets open via an icon on each node.</strong> Selection stays reserved for highlight; a small icon in the node's corner opens the repo's dependency sheet or the package's drift sheet.</li>
+        <li><strong>Unbounded repo palette.</strong> Accent colors are generated per repo with no 8-color cap.</li>
+        <li><strong>Softer dim.</strong> Unrelated nodes/edges dim to <strong>50%</strong> opacity during highlight (was 20%).</li>
+        <li><strong>Leaner package set.</strong> <code>p-limit</code>, <code>d3-force</code>, <code>sonner</code>, and <code>lucide-react</code> are out (see <a href="#packages">Packages</a>).</li>
+      </ul>
+    </div>
+
+    <h2 id="flow">End-to-end flow</h2>
+    <div class="flow">
+      <span class="step">1. Configure tokens</span><span class="arrow">→</span>
+      <span class="step">2. Add repositories (paste URLs)</span><span class="arrow">→</span>
+      <span class="step">3. Pick a branch per repo</span><span class="arrow">→</span>
+      <span class="step">4. Click Analyze</span><span class="arrow">→</span>
+      <span class="step">5. Explore the graph</span>
+    </div>
+    <p>Steps 1–3 are one-time setup per session (tokens are re-entered each session; repos and branches survive reloads). Step 5 is the daily loop — clicking repo nodes opens their dependency sheets, clicking package pills opens drift details.</p>
+
+    <h2 id="tokens">Access tokens</h2>
+    <div class="card">
+      <h3>Behavior</h3>
+      <ul>
+        <li>The <strong>Access Tokens</strong> dialog (opened from <em>Manage tokens</em> in the canvas tools panel) accepts one GitHub PAT and one token per GitLab host — <code>gitlab.com</code> is always listed, and each self-hosted host appears automatically once a repo from it is added.</li>
+        <li><strong>Tokens are never persisted.</strong> They live only in an in-memory store (no <code>localStorage</code>, no cookies). Reloading the page wipes them, and the dialog says so explicitly: <em>"Tokens are kept in memory only and never stored."</em> Password fields use <code>autocomplete="new-password"</code> so the browser's password manager won't offer to save them either.</li>
+        <li><strong>No silent fallback:</strong> a GitLab repo on a host without a configured token is blocked — operations show a <em>"token needed"</em> hint instead of trying another token.</li>
+        <li><strong>Clear all</strong> instantly drops every token; subsequent API calls fail with 401 and the UI points back to the dialog.</li>
+        <li>Tokens travel only as an HTTP header to the app's own same-origin proxy, which converts them to each provider's format (<code>Authorization: Bearer</code> for GitHub, <code>PRIVATE-TOKEN</code> for GitLab). They never appear in URLs or logs.</li>
+      </ul>
+    </div>
+
+    <h2 id="repos">Repository management</h2>
+    <div class="card">
+      <h3>Behavior</h3>
+      <ul>
+        <li>Adding a repo is pasting a URL (<code>https://github.com/owner/repo</code>, <code>https://gitlab.com/group/sub/project</code>, self-hosted equivalents, with <code>.git</code> and <code>/tree/...</code>/<code>/-/tree/...</code> suffixes tolerated). The URL is parsed and validated client-side before any request.</li>
+        <li>The provider is detected from the hostname: <code>github.com</code> → GitHub; anything else → GitLab (which also enables self-hosted instances).</li>
+        <li><strong>Token gate:</strong> without the applicable token, adding is blocked with a toast and nothing is saved.</li>
+        <li>On success, the app fetches the repo's default branch and stores the repo in <code>localStorage</code> (key <code>rda-repos</code>) — provider, host, path, branches only, never tokens or fetched data.</li>
+        <li><strong>Dedupe:</strong> re-adding the same provider+host+path doesn't create a duplicate; it selects the existing card (GitHub paths compare case-insensitively).</li>
+        <li>Each repo is an item in the canvas-side <strong>repository list panel</strong>: name in monospace, provider badge, host badge for non-<code>gitlab.com</code> GitLab, a branch selector, and a remove button. List items are selectable (single selection within the list, keyboard-accessible) and the selection survives reloads; clicking an item has the same effect as selecting that repo's node on the canvas (see <a href="#graph">Graph view</a>). Removing a repo drops it from the next analysis.</li>
+      </ul>
+    </div>
+
+    <h2 id="branches">Branch selection</h2>
+    <div class="card">
+      <h3>Behavior</h3>
+      <ul>
+        <li>Each card has its own branch dropdown, loaded on demand from the provider (paginated, capped at 500 branches) and cached per repository.</li>
+        <li>The chosen branch is <strong>persisted per repo</strong> and restored on reload; repos keep independent selections.</li>
+        <li>Switching branches re-reads that repo's <code>package.json</code> files on the next Analyze — each repo+branch pair is cached separately.</li>
+        <li>If the persisted branch was deleted upstream, the selector shows it as a disabled <em>"(not found)"</em> option so the user understands the 404s instead of seeing a blank box.</li>
+        <li>States: skeleton while loading, destructive badge on error, amber <em>"token needed"</em> badge when no token is configured.</li>
+      </ul>
+    </div>
+
+    <h2 id="panel">Repository scanning</h2>
+    <div class="card">
+      <h3>Behavior</h3>
+      <ul>
+        <li>Analysis scans each repo's <strong>entire file tree</strong> on its chosen branch and reads every <code>package.json</code> — the monorepo-aware part. Generated directories are excluded: <code>node_modules</code>, <code>dist</code>, <code>build</code>, <code>.next</code>, <code>out</code>, <code>coverage</code>, <code>vendor</code>.</li>
+        <li>File downloads run with <strong>bounded concurrency (8 at a time)</strong> to stay friendly to provider rate limits. A malformed or failing file is skipped and counted — it never aborts the rest.</li>
+        <li>Dependencies are classified as <strong>Dependencies / Dev / Peer</strong>, and version ranges are kept as raw strings (<code>^18.2.0</code>, <code>workspace:*</code>, etc. — no semver interpretation).</li>
+      </ul>
+    </div>
+
+    <h2 id="analyze">Cross-repo analysis (Analyze)</h2>
+    <div class="card">
+      <h3>Behavior</h3>
+      <ul>
+        <li>One click on <strong>Analyze</strong> aggregates every registered repo at its selected branch. The button is disabled with no repos or while running.</li>
+        <li>Grouping is <strong>dependency → version range → projects</strong>: each package becomes one entry; each distinct range string a group; each group lists the projects declaring it. A monorepo's packages count individually, and <code>^1.2.3</code> vs <code>1.2.3</code> are deliberately different ranges — the goal is literal manifest divergence, not semver resolution.</li>
+        <li>Groups sort <strong>drift-first</strong> (more than one distinct range), then by project count.</li>
+        <li><strong>Partial failures never abort:</strong> a repo without a token, a 404, a rate limit, or a network error lands in a dismissible amber banner naming the repo and reason; the rest complete normally. If <em>everything</em> fails, the banner says so explicitly and no results render.</li>
+        <li>The analysis <strong>reuses the warm cache</strong> (5-minute freshness window) — repos read moments ago cost zero new requests.</li>
+      </ul>
+    </div>
+
+    <h2 id="graph">Graph view (the only view)</h2>
+    <p>After Analyze, results render directly as an <strong>interactive force-directed graph</strong>. This is the app's single view for analysis results — and the app is <strong>canvas-first</strong>: the graph fills the window and every tool floats over it.</p>
+    <div class="card">
+      <h3>Layout &amp; chrome (React Flow <code>Panel</code>s)</h3>
+      <ul>
+        <li>No header or sidebar: the canvas occupies the full app surface. Utilities live in floating <code>Panel</code> components (React Flow's native overlay primitive, anchored to canvas corners).</li>
+        <li><strong>Tools panel</strong> — buttons for <em>Add repository</em>, <em>Manage tokens</em> (opens the Access Tokens dialog), the dependency-type toggles, and <em>Analyze</em>.</li>
+        <li><strong>Repository list panel</strong> (side: left or right, TBD) — the list of registered repos with their branch selectors. It mirrors canvas selection: clicking a list item selects the corresponding repo node and applies the same highlight as canvas selection. The list enforces <strong>single selection</strong>; the canvas keeps React Flow's <strong>native multi-selection</strong> (shift-click / selection box) — both behaviors come from the library, nothing custom.</li>
+        <li>Standard canvas controls (zoom, pan, fit) via <code>Background</code> + <code>Controls</code>.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Nodes</h3>
+      <ul>
+        <li><strong>Repository nodes</strong> — rectangles with the repo name and evaluated branch. Each repo gets a <strong>distinct accent color generated without a palette cap</strong> (derived deterministically from the repo identity, e.g. hash-based hue rotation), used for its border and its outgoing edges.</li>
+        <li><strong>Package nodes</strong> — pills with the package name, an amber <span class="badge amber">drift</span> marker when version ranges diverge, and one version badge per using repository, each badge colored with that repo's accent color.</li>
+        <li><strong>Layout</strong> — force-directed: packages used by multiple repos accumulate link attraction and settle near the center; unique packages dangle near their parent repo. Positions are deterministic (same input → same layout), computed synchronously by the app, and recomputed when the visible set changes.</li>
+        <li><strong>Edges</strong> — straight lines in the source repo's color. Handles sit at each node's center, so edges visually attach from any direction (and are non-interactive, so they can't start a connection). Node dragging is disabled.</li>
+      </ul>
+      <h3>Interactions</h3>
+      <ul>
+        <li><strong>Highlight = React Flow native selection.</strong> Clicking a node (repo or package) selects it via the library's built-in selection model (<code>selected</code> property on the node, surfaced through <code>onSelectionChange</code>; multi-select via shift-click and selection box comes free). The highlight rule derives from that state: selected nodes, their direct neighbors, and connecting edges stay fully visible; everything unrelated dims to <strong>50% opacity</strong>. Deselecting (click the node again, click the pane, or press Escape — all native) clears it. Selecting from the repository list panel produces the identical effect, constrained to one repo at a time.</li>
+        <li><strong>Sheet icon on every node</strong> — each node carries a small inline-SVG icon in its corner (an inline-SVG button; no icon library) that opens its detail sheet on click, without disturbing the selection/highlight state:
+          <ul>
+            <li><strong>Repository node</strong> → sheet with a <strong>table of everything that repo declares</strong>: package, version, and drift status, with a package-count badge in the title and monorepo paths shown for non-root manifests.</li>
+            <li><strong>Package pill</strong> → sheet with the drift table: every project using the package, with repository, target branch, declared version, and a status column (<span class="badge">aligned</span> / <span class="badge">most common</span> / <span class="badge amber">divergent</span>). The title shows the package name with a badge counting distinct versions.</li>
+          </ul>
+        </li>
+        <li><strong>"Show shared only"</strong> checkbox → hides packages connected to a single project and recalculates the layout with what remains.</li>
+      </ul>
+    </div>
+
+    <h2 id="resilience">Failure handling</h2>
+    <ul>
+      <li><strong>Partial failure is a first-class state everywhere:</strong> per-file (skipped + counted), per-repo (banner), per-host (one unreachable GitLab doesn't affect others).</li>
+      <li>Errors map to actionable messages: 401 → review your token; 404 → repo not found / no access; 429 (and GitHub's 403 rate-limit body) → rate limit, try later; network failure → 502 with a JSON body from the proxy.</li>
+      <li>No API error crashes the current view; transient feedback (toasts) is paired with inline badges where a component is affected.</li>
+      <li>Pagination loops are capped (5 pages of branches, 100 pages of tree entries) so a misbehaving upstream can't spin forever, and proxy calls have a 30-second timeout.</li>
+    </ul>
+
+    <h2 id="architecture">Architecture</h2>
+    <div class="card">
+      <h3>Request path</h3>
+      <div class="flow">
+        <span class="step">UI (React)</span><span class="arrow">→</span>
+        <span class="step">TanStack Query cache</span><span class="arrow">→</span>
+        <span class="step">HTTP client (injects token headers)</span><span class="arrow">→</span>
+        <span class="step">/api/proxy/github/* or /api/proxy/gitlab/*</span><span class="arrow">→</span>
+        <span class="step">GitHub API / GitLab instance</span>
+      </div>
+      <ul>
+        <li>The browser <strong>never talks to Git providers directly</strong>. Two Next.js Route Handlers proxy everything: the GitHub one targets a fixed host; the GitLab one reads the target host from a header and validates it with an <strong>anti-SSRF guard</strong> (http/https only; rejects localhost, private/reserved IPs including IPv6 forms, embedded credentials) and never follows redirects.</li>
+        <li>Proxy responses are passthrough with <code>no-store</code> both ways — caching lives exclusively in the client.</li>
+        <li>Provider differences (URL parsing, pagination style, base64 vs raw file content) are isolated behind one interface, so the data layer is provider-agnostic.</li>
+        <li>State: lightweight client stores — repos + selection (persisted), tokens (memory-only), UI settings (persisted), and ephemeral analysis results.</li>
+      </ul>
+    </div>
+
+    <h2 id="packages">Packages</h2>
+    <h3>The three pillars</h3>
+    <div class="card pkg-card trio">
+      <h3>@tanstack/react-query <span class="badge strong">v5</span></h3>
+      <p>Owns all server-state caching. Query keys isolate every combination: <code>['branches', repoId]</code> and <code>['pkg-files', repoId, branch]</code> — switching repos or branches never reads another entry's cache. Defaults: 5-minute <code>staleTime</code> (exploration without refetch storms), 30-minute <code>gcTime</code>, one retry, no focus refetch. Analyze orchestration uses <code>ensureQueryData</code> so it reuses anything warm, and query concurrency is managed through TanStack Query itself — no separate concurrency library.</p>
+    </div>
+    <div class="card pkg-card trio">
+      <h3>shadcn/ui <span class="badge strong">new-york / neutral</span></h3>
+      <p>The entire component vocabulary: button, input, badge, card, checkbox, dialog, select, skeleton, separator, scroll-area, sheet, table. Components are used <strong>as shipped</strong> — styling is composed with <code>className</code> at usage sites (amber warning styling, monospace identifiers), never by editing the generated internals. Only the base components are adopted; auxiliary libraries previously layered around them (toast and icon packages) are out of scope.</p>
+    </div>
+    <div class="card pkg-card trio">
+      <h3>@xyflow/react (React Flow) <span class="badge strong">v12</span></h3>
+      <p>Powers the graph view end to end: custom node components (repo cards, package pills) registered via <code>nodeTypes</code>, centered non-interactive <code>Handle</code>s for the attach-from-any-direction edge look, <code>type: 'straight'</code> edges, and <code>Background</code> + <code>Controls</code> for the canvas chrome. App chrome uses the library's native primitives instead of custom UI: <code>Panel</code> for the floating tools and repository-list overlays, and the built-in selection model (<code>selected</code> node property, <code>onSelectionChange</code>, native shift-click multi-select and selection box) drives the highlight behavior — no custom selection state. Detail sheets open from an inline-SVG icon on each node. The canvas itself stays close to the documented default pattern — plain memoized <code>nodes</code>/<code>edges</code> arrays — with <code>nodesDraggable</code> off.</p>
+    </div>
+    <h3>Supporting packages</h3>
+    <table>
+      <tr><th>Package</th><th>Role</th></tr>
+      <tr><td><code>next</code> 16 (App Router)</td><td>App shell and the two server-side proxy Route Handlers</td></tr>
+      <tr><td><code>react</code> 19 / TypeScript</td><td>UI runtime; typed domain contracts end-to-end</td></tr>
+      <tr><td><code>tailwindcss</code> v4</td><td>Utility styling on the shadcn theme</td></tr>
+      <tr><td><code>ky</code></td><td>HTTP client in browser and proxy routes — prefix URLs, hooks, retry, timeout</td></tr>
+      <tr><td><code>zustand</code> (+persist)</td><td>Client state: repo config (persisted), tokens (memory-only), settings, view</td></tr>
+      <tr><td><code>vitest</code> + Testing Library</td><td>Unit/component tests covering logic, stores, providers, routes and UI</td></tr>
+    </table>
+    <div class="note">
+      <strong>Deliberately out:</strong> <code>p-limit</code> (TanStack Query orchestrates fetching and concurrency), <code>d3-force</code> (graph layout is computed in-house), <code>sonner</code> and <code>lucide-react</code> (no auxiliary toast/icon packages — feedback is inline-first and icons are plain inline SVG where needed).
+    </div>
+
+    <h2 id="limits">Known limits</h2>
+    <ul>
+      <li>Branch selectors cap at 500 branches per repo; GitHub's recursive tree may truncate on giant repos (tolerated — coverage can be partial without error).</li>
+      <li>Node dragging in the graph is disabled.</li>
+      <li>Drift is a literal string comparison of version ranges, not semver equivalence.</li>
+      <li>Desktop-first (≥1280px); below 1024px the layout degrades to a stacked scroll.</li>
+    </ul>
+  </main>
+</div>
+</body>
+</html>

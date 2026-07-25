@@ -6,21 +6,27 @@ export interface HighlightSets {
 }
 
 /**
- * Click-selection highlight: the selected node plus its direct neighbors and
- * the connecting edges; the caller dims everything not in these sets.
- * Returns null when the selection is empty or stale (nothing dimmed).
+ * Selection highlight driven by React Flow's native selection: every selected
+ * node plus its direct neighbors and the connecting edges; the caller dims
+ * everything not in these sets. Returns null when nothing valid is selected
+ * (nothing dimmed). Multiple selected nodes union their neighborhoods.
  */
-export function computeHighlight(data: GraphData, selectedNodeId: string | null): HighlightSets | null {
-  if (!selectedNodeId) return null;
-  const exists =
-    data.repoNodes.some((node) => node.id === selectedNodeId) ||
-    data.packageNodes.some((node) => node.id === selectedNodeId);
-  if (!exists) return null;
+export function computeHighlight(
+  data: GraphData,
+  selectedNodeIds: readonly string[],
+): HighlightSets | null {
+  const knownIds = new Set([
+    ...data.repoNodes.map((node) => node.id),
+    ...data.packageNodes.map((node) => node.id),
+  ]);
+  const valid = selectedNodeIds.filter((id) => knownIds.has(id));
+  if (valid.length === 0) return null;
 
-  const nodeIds = new Set<string>([selectedNodeId]);
+  const nodeIds = new Set<string>(valid);
   const edgeIds = new Set<string>();
+  const selected = new Set(valid);
   for (const edge of data.edges) {
-    if (edge.source === selectedNodeId || edge.target === selectedNodeId) {
+    if (selected.has(edge.source) || selected.has(edge.target)) {
       edgeIds.add(edge.id);
       nodeIds.add(edge.source);
       nodeIds.add(edge.target);

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
-import { Toaster } from 'sonner';
+import { Toaster } from '@/components/toaster';
 import { QueryProvider } from '@/components/query-provider';
 import './globals.css';
 
@@ -24,7 +24,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
       <body className="antialiased">
         <QueryProvider>{children}</QueryProvider>
-        <Toaster richColors position="bottom-right" />
+        <Toaster />
       </body>
     </html>
   );

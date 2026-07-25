@@ -1,4 +1,3 @@
-import pLimit from 'p-limit';
 import type { PackageJsonFile, RepoConfig } from './types';
 import { createProxyClient, getJsonWithHeaders } from './proxy-client';
 import { getProvider, listPackageJsonPaths } from './providers';
@@ -15,6 +14,25 @@ export function effectiveBranch(repo: RepoConfig): string | undefined {
   return repo.selectedBranch ?? repo.defaultBranch;
 }
 
+/** Run async tasks over `items` with at most `limit` in flight, preserving order. */
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  task: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let next = 0;
+  async function worker() {
+    while (next < items.length) {
+      const index = next;
+      next += 1;
+      results[index] = await task(items[index]);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return results;
+}
+
 /**
  * Fetch every package.json path with bounded concurrency (max 8 in flight —
  * spec §4.6). Individual failures are skipped and counted, never fatal.
@@ -23,20 +41,15 @@ export async function collectFiles(
   paths: string[],
   fetchOne: (path: string) => Promise<PackageJsonFile>,
 ): Promise<PackageFilesResult> {
-  const limit = pLimit(FETCH_CONCURRENCY);
   let failedCount = 0;
-  const results = await Promise.all(
-    paths.map((path) =>
-      limit(async () => {
-        try {
-          return await fetchOne(path);
-        } catch {
-          failedCount += 1;
-          return null;
-        }
-      }),
-    ),
-  );
+  const results = await mapWithConcurrency(paths, FETCH_CONCURRENCY, async (path) => {
+    try {
+      return await fetchOne(path);
+    } catch {
+      failedCount += 1;
+      return null;
+    }
+  });
   return {
     files: results.filter((f): f is PackageJsonFile => f !== null),
     failedCount,
