@@ -15,7 +15,7 @@ import { KeyIcon } from '@/components/icons';
 import { DEFAULT_GITLAB_HOST, useTokenStore } from '@/stores/token-store';
 import { useRepoStore } from '@/stores/repo-store';
 
-export function TokenDialog() {
+export function TokenDialog({ size = 'icon' }: { size?: 'icon' | 'icon-xs' | 'icon-sm' | 'icon-lg' }) {
   const [open, setOpen] = useState(false);
   const githubToken = useTokenStore((s) => s.githubToken);
   const gitlabTokens = useTokenStore((s) => s.gitlabTokens);
@@ -40,7 +40,7 @@ export function TokenDialog() {
       <DialogTrigger asChild>
         <Button
           variant="ghost"
-          size="icon"
+          size={size}
           aria-label="Access Tokens"
           title={hasCredentials ? 'Access Tokens' : 'Set your credentials'}
         >

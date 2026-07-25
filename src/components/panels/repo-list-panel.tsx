@@ -47,7 +47,7 @@ export function RepoListPanel({ selectedNodeId, onSelect }: Props) {
               <AddRepoForm onAdded={() => setAddOpen(false)} />
             </DialogContent>
           </Dialog>
-          <TokenDialog />
+          <TokenDialog size="icon-xs" />
         </div>
       </div>
       {repos.length === 0 && (
