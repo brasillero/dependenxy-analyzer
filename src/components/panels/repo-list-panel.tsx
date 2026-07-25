@@ -1,8 +1,12 @@
 'use client';
 
+import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { XIcon } from '@/components/icons';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AddRepoForm } from '@/components/add-repo-form';
+import { TokenDialog } from '@/components/token-dialog';
+import { PlusIcon, XIcon } from '@/components/icons';
 import { cn } from '@/lib/utils';
 import { useRepoStore } from '@/stores/repo-store';
 
@@ -21,12 +25,31 @@ function shortName(displayName: string): string {
 export function RepoListPanel({ selectedNodeId, onSelect }: Props) {
   const repos = useRepoStore((s) => s.repos);
   const removeRepo = useRepoStore((s) => s.removeRepo);
+  const [addOpen, setAddOpen] = useState(false);
 
   return (
     <div className="nowheel max-h-[70vh] w-56 space-y-1.5 overflow-y-auto rounded-md border bg-card p-2 shadow-sm">
-      <p className="px-1 text-xs font-medium text-muted-foreground">
-        Repositories{repos.length > 0 ? ` (${repos.length})` : ''}
-      </p>
+      <div className="flex items-center justify-between px-1">
+        <p className="text-xs font-medium text-muted-foreground">
+          Repositories{repos.length > 0 ? ` (${repos.length})` : ''}
+        </p>
+        <div className="flex items-center">
+          <Dialog open={addOpen} onOpenChange={setAddOpen}>
+            <DialogTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-6 w-6" aria-label="Add repository" title="Add repository">
+                <PlusIcon className="h-3.5 w-3.5" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add repository</DialogTitle>
+              </DialogHeader>
+              <AddRepoForm onAdded={() => setAddOpen(false)} />
+            </DialogContent>
+          </Dialog>
+          <TokenDialog />
+        </div>
+      </div>
       {repos.length === 0 && (
         <p className="px-1 text-xs text-muted-foreground">
           No repositories yet — use <span className="font-medium">Add repository</span>.

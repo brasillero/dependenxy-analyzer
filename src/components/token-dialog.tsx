@@ -24,6 +24,8 @@ export function TokenDialog() {
   const clearAll = useTokenStore((s) => s.clearAll);
   const repos = useRepoStore((s) => s.repos);
 
+  const hasCredentials = githubToken !== '' || Object.keys(gitlabTokens).length > 0;
+
   // gitlab.com is always present; self-hosted hosts appear as repos are added.
   const gitlabHosts = useMemo(() => {
     const hosts = new Set<string>([DEFAULT_GITLAB_HOST]);
@@ -36,7 +38,13 @@ export function TokenDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label="Access Tokens">
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Access Tokens"
+          title={hasCredentials ? 'Access Tokens' : 'Set your credentials'}
+          className={hasCredentials ? undefined : 'text-amber-600 hover:text-amber-700'}
+        >
           <KeyIcon className="h-4 w-4" />
         </Button>
       </DialogTrigger>

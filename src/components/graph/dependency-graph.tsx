@@ -24,7 +24,7 @@ import { useRepoStore } from '@/stores/repo-store';
 import { useSettingsStore } from '@/stores/settings-store';
 import { useViewStore } from '@/stores/view-store';
 import { RepoListPanel } from '@/components/panels/repo-list-panel';
-import { UtilityPanel } from '@/components/panels/utility-panel';
+import { UtilityPanel, AnalyzeButton } from '@/components/panels/utility-panel';
 import { AnalysisBanner } from '@/components/analysis-banner';
 import { PackageDetailsDrawer } from './package-details-drawer';
 import { PackageNode } from './package-node';
@@ -163,7 +163,10 @@ export function DependencyGraph() {
           <RepoListPanel selectedNodeId={listSelectedNodeId} onSelect={handlePanelSelect} />
         </Panel>
         <Panel position="bottom-center">
-          <UtilityPanel sharedOnly={sharedOnly} onSharedOnlyChange={setSharedOnly} />
+          <div className="flex items-center gap-2">
+            <UtilityPanel sharedOnly={sharedOnly} onSharedOnlyChange={setSharedOnly} />
+            <AnalyzeButton />
+          </div>
         </Panel>
         {!analysis && (
           <Panel position="top-center" className="mt-24">
