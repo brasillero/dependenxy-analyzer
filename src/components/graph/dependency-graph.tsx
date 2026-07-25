@@ -11,7 +11,6 @@ import {
   type NodeChange,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
   buildGraphData,
   filterSharedOnly,
@@ -25,7 +24,7 @@ import { useRepoStore } from '@/stores/repo-store';
 import { useSettingsStore } from '@/stores/settings-store';
 import { useViewStore } from '@/stores/view-store';
 import { RepoListPanel } from '@/components/panels/repo-list-panel';
-import { ToolsPanel } from '@/components/panels/tools-panel';
+import { UtilityPanel } from '@/components/panels/utility-panel';
 import { AnalysisBanner } from '@/components/analysis-banner';
 import { PackageDetailsDrawer } from './package-details-drawer';
 import { PackageNode } from './package-node';
@@ -160,24 +159,11 @@ export function DependencyGraph() {
       >
         <Background />
         <Controls />
-        <Panel position="top-left">
-          <ToolsPanel />
-        </Panel>
         <Panel position="top-right">
           <RepoListPanel selectedNodeId={listSelectedNodeId} onSelect={handlePanelSelect} />
         </Panel>
-        <Panel position="top-center">
-          <div className="flex items-center gap-1.5 rounded-md border bg-card px-3 py-1.5 shadow-sm">
-            <Checkbox
-              id="graph-shared-only"
-              checked={sharedOnly}
-              onCheckedChange={(value) => setSharedOnly(value === true)}
-              aria-label="Show shared only"
-            />
-            <label htmlFor="graph-shared-only" className="cursor-pointer text-sm">
-              Show shared only
-            </label>
-          </div>
+        <Panel position="bottom-center">
+          <UtilityPanel sharedOnly={sharedOnly} onSharedOnlyChange={setSharedOnly} />
         </Panel>
         {!analysis && (
           <Panel position="top-center" className="mt-24">

@@ -11,6 +11,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { KeyIcon } from '@/components/icons';
 import { DEFAULT_GITLAB_HOST, useTokenStore } from '@/stores/token-store';
 import { useRepoStore } from '@/stores/repo-store';
 
@@ -35,7 +36,9 @@ export function TokenDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline">Access Tokens</Button>
+        <Button variant="ghost" size="icon" aria-label="Access Tokens">
+          <KeyIcon className="h-4 w-4" />
+        </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
