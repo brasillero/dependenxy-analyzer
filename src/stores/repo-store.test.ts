@@ -26,10 +26,28 @@ describe('repo-store', () => {
     expect(persisted.state.repos).toHaveLength(1);
   });
 
-  it('dedupes by provider+host+path and returns the existing id', () => {
+  it('dedupes by provider+host+path+branch and returns the existing id', () => {
     useRepoStore.getState().addRepo(repo('a'));
-    const second = { ...repo('b'), path: 'acme/a' }; // same identity, different id
+    const second = { ...repo('b'), path: 'acme/a' }; // same repo+branch, different id
     const result = useRepoStore.getState().addRepo(second);
+    expect(useRepoStore.getState().repos).toHaveLength(1);
+    expect(result).toBe('a');
+  });
+
+  it('allows the same repository on different branches', () => {
+    useRepoStore.getState().addRepo(repo('a'));
+    const result = useRepoStore
+      .getState()
+      .addRepo({ ...repo('b'), path: 'acme/a', selectedBranch: 'develop' });
+    expect(useRepoStore.getState().repos).toHaveLength(2);
+    expect(result).toBe('b');
+  });
+
+  it('rejects the same repository on the same branch twice', () => {
+    useRepoStore.getState().addRepo(repo('a'));
+    const result = useRepoStore
+      .getState()
+      .addRepo({ ...repo('b'), path: 'acme/a', selectedBranch: 'main' });
     expect(useRepoStore.getState().repos).toHaveLength(1);
     expect(result).toBe('a');
   });

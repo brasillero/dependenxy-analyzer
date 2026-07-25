@@ -5,15 +5,22 @@ import type { RepoConfig } from '@/lib/types';
 interface RepoState {
   repos: RepoConfig[];
   selectedRepoId: string | null;
-  /** Add a repo; dedupes on provider+host+path. Returns the effective repo id. */
+  /** Add a repo; dedupes on provider+host+path+branch. Returns the effective repo id. */
   addRepo: (repo: RepoConfig) => string;
   removeRepo: (id: string) => void;
   setBranch: (id: string, branch: string) => void;
   selectRepo: (id: string | null) => void;
 }
 
+function branchOf(repo: RepoConfig): string | undefined {
+  return repo.selectedBranch ?? repo.defaultBranch;
+}
+
+/** Identity = provider + host + path + branch: the same repo may be added on
+ * several branches, but never the same branch twice. */
 export function sameIdentity(a: RepoConfig, b: RepoConfig): boolean {
   if (a.provider !== b.provider || a.host !== b.host) return false;
+  if (branchOf(a) !== branchOf(b)) return false;
   // GitHub paths are case-insensitive; GitLab paths are case-sensitive.
   if (a.provider === 'github') return a.path.toLowerCase() === b.path.toLowerCase();
   return a.path === b.path;

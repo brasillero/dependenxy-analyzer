@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { LoaderIcon, SearchIcon } from '@/components/icons';
 import { githubProvider } from '@/lib/providers/github';
 import { gitlabProvider } from '@/lib/providers/gitlab';
 import { createProxyClient, getJsonWithHeaders } from '@/lib/proxy-client';
@@ -26,9 +27,10 @@ function parseRepoUrl(url: string) {
 }
 
 /**
- * Two-stage add flow: validate the URL and fetch the repo's branches, then
- * require a branch selection (enabled only after the fetch) to confirm. The
- * chosen branch is persisted as selectedBranch and can't be changed later.
+ * Two-stage add flow: validate the URL and fetch the repo's branches (Search),
+ * then require a branch selection to confirm (Add repository). The same repo
+ * may be added on several branches — dedupe is repo+branch, checked at add
+ * time. The chosen branch is persisted and can't be changed later.
  */
 export function AddRepoForm({ onAdded }: { onAdded?: () => void }) {
   const [url, setUrl] = useState('');
@@ -74,16 +76,6 @@ export function AddRepoForm({ onAdded }: { onAdded?: () => void }) {
       return;
     }
 
-    // Dedupe before any network call — same provider+host+path rules as the store.
-    const existing = useRepoStore.getState().repos.find((r) => sameIdentity(r, candidate));
-    if (existing) {
-      selectRepo(existing.id);
-      setUrl('');
-      toast.info('Repository already added — selected it.');
-      onAdded?.();
-      return;
-    }
-
     setLoading(true);
     try {
       const client = createProxyClient(candidate);
@@ -93,7 +85,8 @@ export function AddRepoForm({ onAdded }: { onAdded?: () => void }) {
       const list = await listBranches(candidate, pagedGet);
       setDraft({ ...candidate, defaultBranch });
       setBranches(list);
-      setBranch(defaultBranch);
+      // A single available branch is the obvious default; otherwise the repo's default.
+      setBranch(list.length === 1 ? list[0] : defaultBranch);
     } catch (apiError) {
       toast.error(describeError(apiError));
       resetFetch();
@@ -104,7 +97,18 @@ export function AddRepoForm({ onAdded }: { onAdded?: () => void }) {
 
   const handleAdd = () => {
     if (!draft || !branch) return;
-    const id = addRepo({ ...draft, selectedBranch: branch });
+    const candidate = { ...draft, selectedBranch: branch };
+    // Dedupe is repo+branch — the same repo may exist on other branches.
+    const existing = useRepoStore.getState().repos.find((r) => sameIdentity(r, candidate));
+    if (existing) {
+      selectRepo(existing.id);
+      toast.info('Repository already added on this branch — selected it.');
+      setUrl('');
+      resetFetch();
+      onAdded?.();
+      return;
+    }
+    const id = addRepo(candidate);
     selectRepo(id);
     setUrl('');
     resetFetch();
@@ -123,11 +127,16 @@ export function AddRepoForm({ onAdded }: { onAdded?: () => void }) {
           placeholder="https://github.com/owner/repo"
           aria-label="Repository URL"
         />
-        {!branches && (
-          <Button type="submit" variant="secondary" disabled={loading || !url.trim()}>
-            {loading ? 'Fetching…' : 'Fetch branches'}
-          </Button>
-        )}
+        <Button type="submit" variant="secondary" className="w-24 shrink-0" disabled={loading || !url.trim()}>
+          {loading ? (
+            <LoaderIcon className="h-4 w-4 animate-spin" aria-label="Fetching" />
+          ) : (
+            <>
+              <SearchIcon className="h-4 w-4" />
+              Search
+            </>
+          )}
+        </Button>
       </div>
 
       <div className="space-y-1.5">
@@ -152,11 +161,9 @@ export function AddRepoForm({ onAdded }: { onAdded?: () => void }) {
 
       {error && <p className="text-sm text-destructive">{error}</p>}
 
-      {branches && (
-        <Button type="button" className="w-full" onClick={handleAdd} disabled={!branch}>
-          Add repository
-        </Button>
-      )}
+      <Button type="button" className="w-full" onClick={handleAdd} disabled={!branch}>
+        Add repository
+      </Button>
     </form>
   );
 }

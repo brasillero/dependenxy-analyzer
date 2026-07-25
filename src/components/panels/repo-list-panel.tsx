@@ -64,6 +64,11 @@ export function RepoListPanel({ selectedNodeId, onSelect }: Props) {
                     {repo.host}
                   </Badge>
                 )}
+                {(repo.selectedBranch ?? repo.defaultBranch) && (
+                  <Badge variant="outline" className="px-1.5 py-0 font-mono text-[10px]">
+                    {repo.selectedBranch ?? repo.defaultBranch}
+                  </Badge>
+                )}
               </div>
             </div>
             <Button
