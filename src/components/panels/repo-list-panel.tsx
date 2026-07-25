@@ -36,8 +36,8 @@ export function RepoListPanel({ selectedNodeId, onSelect }: Props) {
         <div className="flex items-center">
           <Dialog open={addOpen} onOpenChange={setAddOpen}>
             <DialogTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-6 w-6" aria-label="Add repository" title="Add repository">
-                <PlusIcon className="h-3.5 w-3.5" />
+              <Button variant="ghost" size="icon-xs" aria-label="Add repository" title="Add repository">
+                <PlusIcon />
               </Button>
             </DialogTrigger>
             <DialogContent>
@@ -96,8 +96,7 @@ export function RepoListPanel({ selectedNodeId, onSelect }: Props) {
             </div>
             <Button
               variant="ghost"
-              size="icon"
-              className="h-5 w-5 shrink-0"
+              size="icon-xs"
               aria-label={`Remove ${repo.displayName}`}
               onClick={(event) => {
                 event.stopPropagation();
@@ -105,7 +104,7 @@ export function RepoListPanel({ selectedNodeId, onSelect }: Props) {
                 removeRepo(repo.id);
               }}
             >
-              <XIcon className="h-3.5 w-3.5" />
+              <XIcon />
             </Button>
           </div>
         );

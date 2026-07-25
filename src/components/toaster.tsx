@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { Button } from '@/components/ui/button';
 import { XIcon } from '@/components/icons';
 import { cn } from '@/lib/utils';
 import { useToastStore, type ToastItem } from '@/lib/toast';
@@ -22,14 +23,9 @@ function ToastCard({ item }: { item: ToastItem }) {
       )}
     >
       <span className="min-w-0 flex-1">{item.message}</span>
-      <button
-        type="button"
-        aria-label="Dismiss"
-        onClick={() => dismiss(item.id)}
-        className="shrink-0 text-muted-foreground hover:text-foreground"
-      >
-        <XIcon className="h-3.5 w-3.5" />
-      </button>
+      <Button variant="ghost" size="icon-xs" aria-label="Dismiss" onClick={() => dismiss(item.id)}>
+        <XIcon />
+      </Button>
     </div>
   );
 }

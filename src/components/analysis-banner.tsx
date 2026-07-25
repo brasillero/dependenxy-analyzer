@@ -44,12 +44,11 @@ export function AnalysisBanner() {
           </div>
           <Button
             variant="ghost"
-            size="icon"
-            className="h-6 w-6 shrink-0"
+            size="icon-xs"
             aria-label="Dismiss"
             onClick={() => setBannerDismissed(true)}
           >
-            <XIcon className="h-4 w-4" />
+            <XIcon />
           </Button>
         </CardContent>
       </Card>

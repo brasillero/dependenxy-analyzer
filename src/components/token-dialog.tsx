@@ -43,7 +43,6 @@ export function TokenDialog() {
           size="icon"
           aria-label="Access Tokens"
           title={hasCredentials ? 'Access Tokens' : 'Set your credentials'}
-          className={hasCredentials ? undefined : 'text-amber-600 hover:text-amber-700'}
         >
           <KeyIcon className="h-4 w-4" />
         </Button>

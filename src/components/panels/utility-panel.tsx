@@ -135,7 +135,6 @@ export function AnalyzeButton() {
       disabled={disabled}
       aria-label="Analyze"
       title={analyzing ? 'Analyzing…' : title}
-      className="rounded-md shadow-sm"
     >
       {analyzing ? <LoaderIcon className="h-4 w-4 animate-spin" /> : <PlayIcon className="h-4 w-4" />}
     </Button>

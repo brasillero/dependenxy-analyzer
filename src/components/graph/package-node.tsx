@@ -1,4 +1,5 @@
 import { Handle, Position, type Node, type NodeProps } from '@xyflow/react';
+import { Button } from '@/components/ui/button';
 import { TableIcon } from '@/components/icons';
 import type { PackageNodeData } from '@/lib/graph/graph-data';
 
@@ -27,18 +28,19 @@ export function PackageNodeContent({
           </span>
         )}
         {onOpenDetails && (
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="icon-xs"
             aria-label={`Version details of ${data.packageName}`}
             title="Open version details"
             onClick={(event) => {
               event.stopPropagation();
               onOpenDetails();
             }}
-            className="nodrag shrink-0 text-muted-foreground hover:text-foreground"
+            className="nodrag"
           >
-            <TableIcon className="h-3 w-3" />
-          </button>
+            <TableIcon />
+          </Button>
         )}
       </div>
       <div className="mt-1 flex max-w-56 flex-wrap gap-1">

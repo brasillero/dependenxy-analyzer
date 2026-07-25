@@ -1,4 +1,5 @@
 import { Handle, Position, type Node, type NodeProps } from '@xyflow/react';
+import { Button } from '@/components/ui/button';
 import { TableIcon } from '@/components/icons';
 import type { RepoNodeData } from '@/lib/graph/graph-data';
 
@@ -22,18 +23,19 @@ export function RepoNodeContent({
           {data.label}
         </p>
         {onOpenDetails && (
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="icon-xs"
             aria-label={`Dependencies of ${data.label}`}
             title="Open dependency list"
             onClick={(event) => {
               event.stopPropagation();
               onOpenDetails();
             }}
-            className="nodrag shrink-0 text-muted-foreground hover:text-foreground"
+            className="nodrag"
           >
-            <TableIcon className="h-3.5 w-3.5" />
-          </button>
+            <TableIcon />
+          </Button>
         )}
       </div>
       <p className="text-xs text-muted-foreground">on {data.branch}</p>
