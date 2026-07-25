@@ -7,6 +7,7 @@ import {
   Controls,
   Panel,
   ReactFlow,
+  useNodesState,
   type Edge,
   type Node,
   type NodeChange,
@@ -97,40 +98,68 @@ export function DependencyGraph() {
     [graphData, selectedIds],
   );
 
-  // Selection is driven by React Flow's native model: the library emits
-  // select changes (click, shift-click, selection box, pane click, Escape)
-  // and we mirror them into state — multi-select stays native behavior.
-  const onNodesChange = useCallback((changes: NodeChange[]) => {
-    setSelectedIds((prev) => {
-      let next: Set<string> | null = null;
-      for (const change of changes) {
-        if (change.type === 'select') {
-          next ??= new Set(prev);
-          if (change.selected) {
-            next.add(change.id);
-          } else {
-            next.delete(change.id);
-          }
-        }
-      }
-      return next ?? prev;
-    });
-  }, []);
-
-  const nodes: Node[] = useMemo(
+  // Derived "base" nodes from layout + data + highlight. Stable during a
+  // drag (none of these inputs change mid-gesture).
+  const baseNodes: Node[] = useMemo(
     () =>
       [...graphData.repoNodes, ...graphData.packageNodes].map((node) => ({
         id: node.id,
         type: node.type,
         position: positions.get(node.id) ?? { x: 0, y: 0 },
-        selected: selectedIds.has(node.id),
         data:
           node.type === 'repo'
             ? { ...node.data, onOpenDetails: () => setSelectedRepo(node.data as RepoNodeData) }
             : { ...node.data, onOpenDetails: () => setSelectedPackage(node.data as PackageNodeData) },
         style: highlight && !highlight.nodeIds.has(node.id) ? { opacity: DIMMED_OPACITY } : undefined,
       })),
-    [graphData, positions, selectedIds, highlight],
+    [graphData, positions, highlight],
+  );
+
+  // Canonical controlled pattern: node state owned by useNodesState, changes
+  // (including drags) applied via applyNodeChanges, which recreates only the
+  // affected node objects per frame — every other node keeps its identity and
+  // measured state, so live dragging doesn't blank or flicker the canvas.
+  const [nodes, setNodes, onNodesChangeBase] = useNodesState<Node>([]);
+
+  // Re-sync from the derived nodes only when the inputs change (new analysis,
+  // filter toggle, highlight change) — preserving dragged positions and
+  // selection of surviving nodes. Render-time adjustment (no effect needed).
+  const [prevBaseNodes, setPrevBaseNodes] = useState(baseNodes);
+  if (prevBaseNodes !== baseNodes) {
+    setPrevBaseNodes(baseNodes);
+    setNodes((current) => {
+      const positionsById = new Map(current.map((node) => [node.id, node.position]));
+      const selectedById = new Set(current.filter((node) => node.selected).map((node) => node.id));
+      return baseNodes.map((node) => {
+        const position = positionsById.get(node.id);
+        if (!position) return node;
+        return { ...node, position, selected: selectedById.has(node.id) };
+      });
+    });
+  }
+
+  // Selection is driven by React Flow's native model: the library emits
+  // select changes (click, shift-click, selection box, pane click, Escape)
+  // and we mirror them into state — multi-select stays native behavior.
+  const onNodesChange = useCallback(
+    (changes: NodeChange[]) => {
+      setSelectedIds((prev) => {
+        let next: Set<string> | null = null;
+        for (const change of changes) {
+          if (change.type === 'select') {
+            next ??= new Set(prev);
+            if (change.selected) {
+              next.add(change.id);
+            } else {
+              next.delete(change.id);
+            }
+          }
+        }
+        return next ?? prev;
+      });
+      onNodesChangeBase(changes);
+    },
+    [onNodesChangeBase],
   );
 
   const edges: Edge[] = useMemo(
@@ -149,9 +178,18 @@ export function DependencyGraph() {
     [graphData, highlight],
   );
 
-  const handlePanelSelect = useCallback((nodeId: string | null) => {
-    setSelectedIds(nodeId ? new Set([nodeId]) : new Set());
-  }, []);
+  const handlePanelSelect = useCallback(
+    (nodeId: string | null) => {
+      setSelectedIds(nodeId ? new Set([nodeId]) : new Set());
+      setNodes((current) =>
+        current.map((node) => ({
+          ...node,
+          selected: nodeId === null ? false : node.id === nodeId,
+        })),
+      );
+    },
+    [setNodes],
+  );
 
   const listSelectedNodeId = useMemo(() => {
     if (selectedIds.size !== 1) return null;
@@ -167,7 +205,6 @@ export function DependencyGraph() {
         edges={edges}
         nodeTypes={nodeTypes}
         fitView
-        nodesDraggable={false}
         onNodesChange={onNodesChange}
       >
         <Background />
