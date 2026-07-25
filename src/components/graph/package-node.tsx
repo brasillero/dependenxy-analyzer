@@ -1,7 +1,9 @@
 import { Handle, Position, type Node, type NodeProps } from '@xyflow/react';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { TableIcon } from '@/components/icons';
+import { cn } from '@/lib/utils';
 import type { PackageNodeData } from '@/lib/graph/graph-data';
 
 type PackageFlowNode = Node<PackageNodeData, 'package'>;
@@ -14,8 +16,15 @@ export function PackageNodeContent({
   data: PackageNodeData;
   onOpenDetails?: () => void;
 }) {
+  const distinctVersions = [...new Set(data.versions.map((v) => v.version))];
+
   return (
-    <div className="rounded-full border bg-card px-3 py-1.5 shadow-sm">
+    <div
+      className={cn(
+        'rounded-full border bg-card px-3 py-1.5 shadow-sm',
+        data.hasVersionDrift && 'border-amber-500/60 ring-1 ring-amber-500/30',
+      )}
+    >
       <div className="flex items-center gap-2">
         <span
           className="inline-block max-w-40 truncate font-mono text-xs font-bold"
@@ -23,10 +32,17 @@ export function PackageNodeContent({
         >
           {data.packageName}
         </span>
-        {data.hasVersionDrift && (
-          <span className="rounded-full border border-amber-500/50 bg-amber-500/10 px-1.5 text-[10px] text-amber-700 dark:text-amber-400">
-            drift
-          </span>
+        {data.hasVersionDrift ? (
+          <Badge
+            variant="outline"
+            className="border-amber-500/50 bg-amber-500/10 font-mono text-amber-700 dark:text-amber-400"
+          >
+            {distinctVersions.length} versions
+          </Badge>
+        ) : (
+          <Badge variant="secondary" className="font-mono">
+            {distinctVersions[0]}
+          </Badge>
         )}
         {onOpenDetails && (
           <TooltipProvider delayDuration={300}>
@@ -49,18 +65,6 @@ export function PackageNodeContent({
             </Tooltip>
           </TooltipProvider>
         )}
-      </div>
-      <div className="mt-1 flex max-w-56 flex-wrap gap-1">
-        {data.versions.map((version) => (
-          <span
-            key={`${version.repoId}:${version.packagePath}`}
-            className="rounded-full border px-1.5 font-mono text-[10px]"
-            style={{ borderColor: version.repoColor, color: version.repoColor }}
-            title={`${version.repoName} / ${version.packageName}`}
-          >
-            {version.version}
-          </span>
-        ))}
       </div>
     </div>
   );

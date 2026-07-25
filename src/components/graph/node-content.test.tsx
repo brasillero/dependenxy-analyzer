@@ -44,19 +44,24 @@ describe('RepoNodeContent', () => {
 });
 
 describe('PackageNodeContent', () => {
-  it('renders the package name and one version badge per repo, colored by repo', () => {
+  it('shows an amber versions-count badge when drifted, without per-repo badges', () => {
     render(<PackageNodeContent data={packageData} />);
     expect(screen.getByText('react')).toBeInTheDocument();
-    const v18 = screen.getByText('^18.2.0');
-    const v17 = screen.getByText('^17.0.2');
-    expect(v18).toHaveStyle({ color: '#2563eb' });
-    expect(v17).toHaveStyle({ color: '#d97706' });
+    expect(screen.getByText('2 versions')).toBeInTheDocument();
+    // no per-repo version badges on the canvas node:
+    expect(screen.queryByText('^18.2.0')).not.toBeInTheDocument();
+    expect(screen.queryByText('^17.0.2')).not.toBeInTheDocument();
+    expect(screen.queryByText(/drift/i)).not.toBeInTheDocument();
   });
 
-  it('shows the drift indicator only when drifted', () => {
-    const { rerender } = render(<PackageNodeContent data={packageData} />);
-    expect(screen.getByText(/drift/i)).toBeInTheDocument();
-    rerender(<PackageNodeContent data={{ ...packageData, hasVersionDrift: false }} />);
-    expect(screen.queryByText(/drift/i)).not.toBeInTheDocument();
+  it('shows the single version badge when converged', () => {
+    const converged: PackageNodeData = {
+      ...packageData,
+      hasVersionDrift: false,
+      versions: [packageData.versions[0]],
+    };
+    render(<PackageNodeContent data={converged} />);
+    expect(screen.getByText('^18.2.0')).toBeInTheDocument();
+    expect(screen.queryByText(/versions/)).not.toBeInTheDocument();
   });
 });
