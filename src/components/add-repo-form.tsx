@@ -131,11 +131,9 @@ export function AddRepoForm({ onAdded }: { onAdded?: () => void }) {
           {loading ? (
             <LoaderIcon className="h-4 w-4 animate-spin" aria-label="Fetching" />
           ) : (
-            <>
-              <SearchIcon className="h-4 w-4" />
-              Search
-            </>
+            <SearchIcon className="h-4 w-4" />
           )}
+          Search
         </Button>
       </div>
 
