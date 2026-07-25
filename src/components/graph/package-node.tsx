@@ -14,12 +14,17 @@ export function PackageNodeContent({ data }: { data: PackageNodeData }) {
       className={cn(
         'rounded-full border bg-card px-3 py-1.5 shadow-sm',
         data.hasVersionDrift && 'border-amber-500/60 ring-1 ring-amber-500/30',
+        data.isShared && 'cursor-pointer',
       )}
+      title={data.isShared ? `${data.packageName} — double-click for version details` : data.packageName}
     >
       <div className="flex items-center gap-2">
         <span
-          className="inline-block max-w-40 truncate font-mono text-xs font-bold"
-          title={data.packageName}
+          className={cn(
+            'inline-block max-w-40 truncate font-mono text-xs font-bold',
+            data.isShared &&
+              'text-primary underline decoration-primary/40 underline-offset-2 hover:decoration-primary',
+          )}
         >
           {data.packageName}
         </span>
