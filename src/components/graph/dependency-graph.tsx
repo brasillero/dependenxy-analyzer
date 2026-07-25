@@ -100,14 +100,20 @@ export function DependencyGraph() {
   );
 
   // Derived "base" nodes from layout + data + highlight. Stable during a
-  // drag (none of these inputs change mid-gesture).
+  // drag (none of these inputs change mid-gesture). Openable nodes (repos and
+  // shared packages) get an onOpenDetails handler for their link-styled name.
   const baseNodes: Node[] = useMemo(
     () =>
       [...graphData.repoNodes, ...graphData.packageNodes].map((node) => ({
         id: node.id,
         type: node.type,
         position: positions.get(node.id) ?? { x: 0, y: 0 },
-        data: node.data,
+        data:
+          node.type === 'repo'
+            ? { ...node.data, onOpenDetails: () => setSelectedRepo(node.data as RepoNodeData) }
+            : (node.data as PackageNodeData).isShared
+              ? { ...node.data, onOpenDetails: () => setSelectedPackage(node.data as PackageNodeData) }
+              : node.data,
         style: highlight && !highlight.nodeIds.has(node.id) ? { opacity: DIMMED_OPACITY } : undefined,
       })),
     [graphData, positions, highlight],
