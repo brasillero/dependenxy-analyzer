@@ -12,6 +12,7 @@ import {
   type NodeChange,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   buildGraphData,
   filterSharedOnly,
@@ -173,12 +174,25 @@ export function DependencyGraph() {
         <Controls />
         <Panel position="top-right">
           <div className="flex flex-col items-end gap-2">
-            <FiltersPanel sharedOnly={sharedOnly} onSharedOnlyChange={setSharedOnly} />
+            <FiltersPanel />
             <RepoListPanel selectedNodeId={listSelectedNodeId} onSelect={handlePanelSelect} />
           </div>
         </Panel>
         <Panel position="bottom-center">
-          <RefreshButton />
+          <div className="flex items-center gap-2">
+            <label
+              className="flex cursor-pointer items-center gap-2 rounded-md border bg-card px-3 py-1.5 text-sm shadow-sm"
+              title="Hide packages used by only one project"
+            >
+              <Checkbox
+                checked={sharedOnly}
+                onCheckedChange={(value) => setSharedOnly(value === true)}
+                aria-label="Hide unique"
+              />
+              Hide unique
+            </label>
+            <RefreshButton />
+          </div>
         </Panel>
         {!analysis && (
           <Panel position="top-center" className="mt-24">
