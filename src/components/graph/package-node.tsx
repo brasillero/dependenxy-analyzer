@@ -1,21 +1,12 @@
 import { Handle, Position, type Node, type NodeProps } from '@xyflow/react';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { TableIcon } from '@/components/icons';
 import { cn } from '@/lib/utils';
 import type { PackageNodeData } from '@/lib/graph/graph-data';
 
 type PackageFlowNode = Node<PackageNodeData, 'package'>;
 
 /** Pure presentational content (unit-tested directly). */
-export function PackageNodeContent({
-  data,
-  onOpenDetails,
-}: {
-  data: PackageNodeData;
-  onOpenDetails?: () => void;
-}) {
+export function PackageNodeContent({ data }: { data: PackageNodeData }) {
   const distinctVersions = [...new Set(data.versions.map((v) => v.version))];
 
   return (
@@ -44,27 +35,6 @@ export function PackageNodeContent({
             {distinctVersions[0]}
           </Badge>
         )}
-        {onOpenDetails && (
-          <TooltipProvider delayDuration={300}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  aria-label={`Version details of ${data.packageName}`}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onOpenDetails();
-                  }}
-                  className="nodrag"
-                >
-                  <TableIcon />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Open version details</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        )}
       </div>
     </div>
   );
@@ -83,14 +53,7 @@ export function PackageNode({ data }: NodeProps<PackageFlowNode>) {
         style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}
         isConnectable={false}
       />
-      <PackageNodeContent
-        data={data}
-        onOpenDetails={
-          typeof data.onOpenDetails === 'function'
-            ? () => (data.onOpenDetails as () => void)()
-            : undefined
-        }
-      />
+      <PackageNodeContent data={data} />
     </>
   );
 }

@@ -1,50 +1,18 @@
 import { Handle, Position, type Node, type NodeProps } from '@xyflow/react';
-import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { TableIcon } from '@/components/icons';
 import type { RepoNodeData } from '@/lib/graph/graph-data';
 
 type RepoFlowNode = Node<RepoNodeData, 'repo'>;
 
 /** Pure presentational content (unit-tested directly). */
-export function RepoNodeContent({
-  data,
-  onOpenDetails,
-}: {
-  data: RepoNodeData;
-  onOpenDetails?: () => void;
-}) {
+export function RepoNodeContent({ data }: { data: RepoNodeData }) {
   return (
     <div
       className="rounded-md border-2 bg-card px-4 py-2 shadow-sm"
       style={{ borderColor: data.color }}
     >
-      <div className="flex items-center gap-2">
-        <p className="max-w-56 truncate font-mono text-sm font-medium" title={data.label}>
-          {data.label}
-        </p>
-        {onOpenDetails && (
-          <TooltipProvider delayDuration={300}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  aria-label={`Dependencies of ${data.label}`}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onOpenDetails();
-                  }}
-                  className="nodrag"
-                >
-                  <TableIcon />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Open dependency list</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        )}
-      </div>
+      <p className="max-w-56 truncate font-mono text-sm font-medium" title={data.label}>
+        {data.label}
+      </p>
       <p className="text-xs text-muted-foreground">on {data.branch}</p>
     </div>
   );
@@ -63,14 +31,7 @@ export function RepoNode({ data }: NodeProps<RepoFlowNode>) {
         style={{ top: '50%', left: '50%', right: 'auto', transform: 'translate(-50%, -50%)' }}
         isConnectable={false}
       />
-      <RepoNodeContent
-        data={data}
-        onOpenDetails={
-          typeof data.onOpenDetails === 'function'
-            ? () => (data.onOpenDetails as () => void)()
-            : undefined
-        }
-      />
+      <RepoNodeContent data={data} />
     </>
   );
 }

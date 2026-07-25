@@ -11,6 +11,7 @@ import {
   type Edge,
   type Node,
   type NodeChange,
+  type NodeMouseHandler,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import {
@@ -106,10 +107,7 @@ export function DependencyGraph() {
         id: node.id,
         type: node.type,
         position: positions.get(node.id) ?? { x: 0, y: 0 },
-        data:
-          node.type === 'repo'
-            ? { ...node.data, onOpenDetails: () => setSelectedRepo(node.data as RepoNodeData) }
-            : { ...node.data, onOpenDetails: () => setSelectedPackage(node.data as PackageNodeData) },
+        data: node.data,
         style: highlight && !highlight.nodeIds.has(node.id) ? { opacity: DIMMED_OPACITY } : undefined,
       })),
     [graphData, positions, highlight],
@@ -205,6 +203,16 @@ export function DependencyGraph() {
     return only.startsWith('repo_') ? only : null;
   }, [selectedIds]);
 
+  // Double-click opens the detail sheet. Unique (non-shared) packages have no
+  // sheet — there's nothing more to show than the single declaration.
+  const handleNodeDoubleClick: NodeMouseHandler = useCallback((_, node) => {
+    if (node.type === 'repo') {
+      setSelectedRepo(node.data as RepoNodeData);
+    } else if (node.type === 'package' && (node.data as PackageNodeData).isShared) {
+      setSelectedPackage(node.data as PackageNodeData);
+    }
+  }, []);
+
   return (
     <div className="relative h-full w-full">
       <ReactFlow
@@ -214,6 +222,7 @@ export function DependencyGraph() {
         nodeTypes={nodeTypes}
         fitView
         onNodesChange={onNodesChange}
+        onNodeDoubleClick={handleNodeDoubleClick}
       >
         <Background />
         <Controls />
