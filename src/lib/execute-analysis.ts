@@ -15,6 +15,8 @@ export async function executeAnalysis(repos: RepoConfig[], queryClient: QueryCli
   try {
     const { groups, failed } = await runAnalysis(repos, queryClient);
     useViewStore.getState().setAnalysis(groups, failed, failed.length === repos.length);
+    // Fresh results deserve a fresh layout — reset any dragged positions.
+    useViewStore.getState().bumpLayoutVersion();
     if (failed.length === repos.length) {
       toast.error('No repository could be analyzed.');
     }

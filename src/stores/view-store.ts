@@ -11,8 +11,11 @@ interface ViewState {
   analysisTotalFailed: boolean;
   /** True while an analysis run is in flight (auto or manual). */
   analyzing: boolean;
+  /** Incremented to force a full re-layout of the canvas (manual refresh). */
+  layoutVersion: number;
   setAnalysis: (groups: DependencyGroup[], failed: AnalysisFailure[], totalFailed?: boolean) => void;
   setAnalyzing: (analyzing: boolean) => void;
+  bumpLayoutVersion: () => void;
 }
 
 export const useViewStore = create<ViewState>()((set) => ({
@@ -20,7 +23,9 @@ export const useViewStore = create<ViewState>()((set) => ({
   analysisFailed: [],
   analysisTotalFailed: false,
   analyzing: false,
+  layoutVersion: 0,
   setAnalysis: (groups, failed, totalFailed = false) =>
     set({ analysis: groups, analysisFailed: failed, analysisTotalFailed: totalFailed }),
   setAnalyzing: (analyzing) => set({ analyzing }),
+  bumpLayoutVersion: () => set((state) => ({ layoutVersion: state.layoutVersion + 1 })),
 }));

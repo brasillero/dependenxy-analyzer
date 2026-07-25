@@ -26,14 +26,18 @@ describe('computeLayout', () => {
     }
   });
 
-  it('pulls shared packages closer to the center than unique ones', () => {
+  it('settles a shared package near the centroid of its linked repos', () => {
     const positions = computeLayout(nodes, links, WIDTH, HEIGHT);
-    const center = { x: WIDTH / 2, y: HEIGHT / 2 };
-    const dist = (id: string) => {
-      const pos = positions.get(id)!;
-      return Math.hypot(pos.x - center.x, pos.y - center.y);
-    };
-    expect(dist('pkg_shared')).toBeLessThan(dist('pkg_unique'));
+    const repoA = positions.get('repo_a')!;
+    const repoB = positions.get('repo_b')!;
+    const shared = positions.get('pkg_shared')!;
+    const centroid = { x: (repoA.x + repoB.x) / 2, y: (repoA.y + repoB.y) / 2 };
+    const sharedToCentroid = Math.hypot(shared.x - centroid.x, shared.y - centroid.y);
+    const unique = positions.get('pkg_unique')!;
+    const uniqueToItsRepo = Math.hypot(unique.x - repoA.x, unique.y - repoA.y);
+    // The shared package hugs the midpoint of its repos at least as tightly
+    // as the unique one hugs its single repo.
+    expect(sharedToCentroid).toBeLessThanOrEqual(uniqueToItsRepo + 1);
   });
 
   it('handles an empty graph', () => {

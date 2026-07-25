@@ -124,8 +124,16 @@ export function DependencyGraph() {
   // Re-sync from the derived nodes only when the inputs change (new analysis,
   // filter toggle, highlight change) — preserving dragged positions and
   // selection of surviving nodes. Render-time adjustment (no effect needed).
+  // A layoutVersion bump (manual refresh) instead resets everything to the
+  // freshly computed layout, dropping dragged positions.
+  const layoutVersion = useViewStore((s) => s.layoutVersion);
+  const [prevLayoutVersion, setPrevLayoutVersion] = useState(layoutVersion);
   const [prevBaseNodes, setPrevBaseNodes] = useState(baseNodes);
-  if (prevBaseNodes !== baseNodes) {
+  if (prevLayoutVersion !== layoutVersion) {
+    setPrevLayoutVersion(layoutVersion);
+    setPrevBaseNodes(baseNodes);
+    setNodes(baseNodes);
+  } else if (prevBaseNodes !== baseNodes) {
     setPrevBaseNodes(baseNodes);
     setNodes((current) => {
       const positionsById = new Map(current.map((node) => [node.id, node.position]));
