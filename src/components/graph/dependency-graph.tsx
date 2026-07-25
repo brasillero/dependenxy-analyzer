@@ -7,12 +7,10 @@ import {
   ReactFlow,
   type Edge,
   type Node,
-  type NodeChange,
   type NodeMouseHandler,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { Checkbox } from '@/components/ui/checkbox';
-import { buildFlowNodes } from '@/lib/graph/flow-nodes';
 import {
   buildGraphData,
   filterSharedOnly,
@@ -41,13 +39,6 @@ export function DependencyGraph({ groups, repos }: Props) {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [selectedPackage, setSelectedPackage] = useState<PackageNodeData | null>(null);
   const [selectedRepo, setSelectedRepo] = useState<RepoNodeData | null>(null);
-  // Positions moved by the user, keyed by node id — win over the computed layout.
-  const [dragOverrides, setDragOverrides] = useState<ReadonlyMap<string, { x: number; y: number }>>(
-    new Map(),
-  );
-  // Identity cache for buildFlowNodes — preserves React Flow's measured state.
-  // Held in state (never set) because refs may not be read during render.
-  const [nodeCache] = useState(() => new Map<string, Node>());
 
   const graphData = useMemo(() => {
     const full = buildGraphData(groups, repos);
@@ -72,17 +63,17 @@ export function DependencyGraph({ groups, repos }: Props) {
     [graphData, selectedNodeId],
   );
 
-  const nodes: Node[] = useMemo(() => {
-    // Prune stale overrides: a node dragged in a previous graph (filter toggle,
-    // new analysis) must not pin a same-id node off-viewport.
-    const currentIds = new Set(
-      [...graphData.repoNodes, ...graphData.packageNodes].map((node) => node.id),
-    );
-    const activeOverrides = new Map([...dragOverrides].filter(([id]) => currentIds.has(id)));
-    // Identity-preserving build: React Flow drops a node's measured dimensions
-    // whenever its object identity changes, so untouched nodes must be reused.
-    return buildFlowNodes(graphData, positions, activeOverrides, highlight, nodeCache);
-  }, [graphData, positions, dragOverrides, highlight, nodeCache]);
+  const nodes: Node[] = useMemo(
+    () =>
+      [...graphData.repoNodes, ...graphData.packageNodes].map((node) => ({
+        id: node.id,
+        type: node.type,
+        position: positions.get(node.id) ?? { x: 0, y: 0 },
+        data: node.data,
+        style: highlight && !highlight.nodeIds.has(node.id) ? { opacity: DIMMED_OPACITY } : undefined,
+      })),
+    [graphData, positions, highlight],
+  );
 
   const edges: Edge[] = useMemo(
     () =>
@@ -99,26 +90,6 @@ export function DependencyGraph({ groups, repos }: Props) {
       })),
     [graphData, highlight],
   );
-
-  const onNodesChange = useCallback((changes: NodeChange[]) => {
-    setDragOverrides((prev) => {
-      let next: Map<string, { x: number; y: number }> | null = null;
-      for (const change of changes) {
-        // Non-position changes (dimensions, select) are intentionally ignored:
-        // selection is managed externally and React Flow keeps its own measurements.
-        // Position changes are committed on every frame so the dragged node
-        // follows the mouse (React Flow v12 controlled mode needs the loop
-        // closed through state). Only the dragged node gets a fresh identity per
-        // frame — buildFlowNodes' cache preserves every other node's measured
-        // state, so the per-frame rebuilds don't blank the canvas.
-        if (change.type === 'position' && change.position) {
-          next ??= new Map(prev);
-          next.set(change.id, change.position);
-        }
-      }
-      return next ?? prev;
-    });
-  }, []);
 
   const handleNodeClick: NodeMouseHandler = useCallback((_, node) => {
     if (node.type === 'repo' || node.type === 'package') {
@@ -160,7 +131,7 @@ export function DependencyGraph({ groups, repos }: Props) {
         edges={edges}
         nodeTypes={nodeTypes}
         fitView
-        onNodesChange={onNodesChange}
+        nodesDraggable={false}
         onNodeClick={handleNodeClick}
         onNodeDoubleClick={handleNodeDoubleClick}
         onPaneClick={handlePaneClick}
