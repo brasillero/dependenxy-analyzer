@@ -12,7 +12,6 @@ import {
   type NodeChange,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
   buildGraphData,
   filterSharedOnly,
@@ -22,12 +21,13 @@ import {
 import { computeHighlight } from '@/lib/graph/highlight';
 import { computeLayout } from '@/lib/graph/layout';
 import { executeAnalysis } from '@/lib/execute-analysis';
+import { useHasCredentials } from '@/stores/token-store';
 import type { DependencyGroup } from '@/lib/types';
 import { useRepoStore } from '@/stores/repo-store';
 import { useSettingsStore } from '@/stores/settings-store';
 import { useViewStore } from '@/stores/view-store';
-import { FiltersPanel, useHasCredentials } from '@/components/panels/filters-panel';
-import { RepoListPanel } from '@/components/panels/repo-list-panel';
+import { SidePanel } from '@/components/panels/side-panel';
+import { OnboardingCard } from '@/components/onboarding-card';
 import { RefreshButton } from '@/components/panels/utility-panel';
 import { AnalysisBanner } from '@/components/analysis-banner';
 import { PackageDetailsDrawer } from './package-details-drawer';
@@ -173,40 +173,23 @@ export function DependencyGraph() {
         <Background />
         <Controls />
         <Panel position="top-right">
-          <div className="flex flex-col items-end gap-2">
-            <FiltersPanel />
-            <RepoListPanel selectedNodeId={listSelectedNodeId} onSelect={handlePanelSelect} />
-          </div>
+          <SidePanel
+            selectedNodeId={listSelectedNodeId}
+            onSelect={handlePanelSelect}
+            sharedOnly={sharedOnly}
+            onSharedOnlyChange={setSharedOnly}
+          />
         </Panel>
         <Panel position="bottom-center">
-          <div className="flex items-center gap-2">
-            <label
-              className="flex cursor-pointer items-center gap-2 rounded-md border bg-card px-3 py-1.5 text-sm shadow-sm"
-              title="Hide packages used by only one project"
-            >
-              <Checkbox
-                checked={sharedOnly}
-                onCheckedChange={(value) => setSharedOnly(value === true)}
-                aria-label="Hide unique"
-              />
-              Hide unique
-            </label>
-            <RefreshButton />
-          </div>
+          <RefreshButton />
         </Panel>
-        {!analysis && (
-          <Panel position="top-center" className="mt-24">
-            <div className="max-w-sm rounded-md border bg-card p-4 text-center text-sm text-muted-foreground shadow-sm">
-              <p className="font-medium text-foreground">No analysis yet</p>
-              <p className="mt-1">
-                Add your access tokens, register repositories, then click{' '}
-                <span className="font-medium">Analyze</span> to explore dependencies on this canvas.
-              </p>
-            </div>
-          </Panel>
-        )}
         <AnalysisBanner />
       </ReactFlow>
+      {!analysis && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <OnboardingCard />
+        </div>
+      )}
       <PackageDetailsDrawer
         packageData={selectedPackage}
         onClose={() => setSelectedPackage(null)}

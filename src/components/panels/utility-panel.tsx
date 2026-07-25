@@ -7,7 +7,7 @@ import { LoaderIcon, RefreshCwIcon } from '@/components/icons';
 import { executeAnalysis } from '@/lib/execute-analysis';
 import { useRepoStore } from '@/stores/repo-store';
 import { useViewStore } from '@/stores/view-store';
-import { useHasCredentials } from './filters-panel';
+import { useHasCredentials } from '@/stores/token-store';
 
 /**
  * Manual refresh — the analysis itself is automatic (it runs when the repo

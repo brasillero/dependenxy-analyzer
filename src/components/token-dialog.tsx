@@ -16,7 +16,14 @@ import { KeyIcon } from '@/components/icons';
 import { DEFAULT_GITLAB_HOST, useTokenStore } from '@/stores/token-store';
 import { useRepoStore } from '@/stores/repo-store';
 
-export function TokenDialog({ size = 'icon' }: { size?: 'icon' | 'icon-xs' | 'icon-sm' | 'icon-lg' }) {
+export function TokenDialog({
+  size = 'icon',
+  label,
+}: {
+  size?: 'icon' | 'icon-xs' | 'icon-sm' | 'icon-lg';
+  /** When set, the trigger is a labeled outline button instead of an icon button. */
+  label?: string;
+}) {
   const [open, setOpen] = useState(false);
   const githubToken = useTokenStore((s) => s.githubToken);
   const gitlabTokens = useTokenStore((s) => s.gitlabTokens);
@@ -42,9 +49,16 @@ export function TokenDialog({ size = 'icon' }: { size?: 'icon' | 'icon-xs' | 'ic
         <Tooltip>
           <TooltipTrigger asChild>
             <DialogTrigger asChild>
-              <Button variant="ghost" size={size} aria-label="Access Tokens">
-                <KeyIcon className="h-4 w-4" />
-              </Button>
+              {label ? (
+                <Button variant="outline" size="sm">
+                  <KeyIcon className="h-4 w-4" />
+                  {label}
+                </Button>
+              ) : (
+                <Button variant="ghost" size={size} aria-label="Access Tokens">
+                  <KeyIcon className="h-4 w-4" />
+                </Button>
+              )}
             </DialogTrigger>
           </TooltipTrigger>
           <TooltipContent>{hasCredentials ? 'Access Tokens' : 'Set your credentials'}</TooltipContent>

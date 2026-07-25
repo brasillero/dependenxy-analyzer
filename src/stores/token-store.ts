@@ -41,3 +41,10 @@ export const useTokenStore = create<TokenState>()((set, get) => ({
 
   clearAll: () => set({ githubToken: '', gitlabTokens: {} }),
 }));
+
+/** True when at least one credential (GitHub or any GitLab host) is configured. */
+export function useHasCredentials(): boolean {
+  const githubToken = useTokenStore((s) => s.githubToken);
+  const gitlabTokens = useTokenStore((s) => s.gitlabTokens);
+  return githubToken !== '' || Object.keys(gitlabTokens).length > 0;
+}

@@ -3,17 +3,23 @@
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Separator } from '@/components/ui/separator';
 import { AddRepoForm } from '@/components/add-repo-form';
 import { TokenDialog } from '@/components/token-dialog';
 import { PlusIcon, XIcon } from '@/components/icons';
 import { cn } from '@/lib/utils';
+import { DEP_TYPES, type DepType } from '@/lib/types';
 import { useRepoStore } from '@/stores/repo-store';
+import { useSettingsStore } from '@/stores/settings-store';
 
 interface Props {
   /** The canvas-selected node id for this panel's repo (single selection), if any. */
   selectedNodeId: string | null;
   onSelect: (nodeId: string | null) => void;
+  sharedOnly: boolean;
+  onSharedOnlyChange: (value: boolean) => void;
 }
 
 /** Last path segment for compact display ('group/sub/project' -> 'project'). */
@@ -21,14 +27,46 @@ function shortName(displayName: string): string {
   return displayName.split('/').filter(Boolean).pop() ?? displayName;
 }
 
-/** Floating repository list panel — single selection, mirrored to canvas. */
-export function RepoListPanel({ selectedNodeId, onSelect }: Props) {
+const DEP_TYPE_LABELS: Record<DepType, string> = {
+  dependencies: 'dependencies',
+  devDependencies: 'devDependencies',
+  peerDependencies: 'peerDependencies',
+};
+
+/** One unified side panel: dependency filters + repository list, top-right. */
+export function SidePanel({ selectedNodeId, onSelect, sharedOnly, onSharedOnlyChange }: Props) {
   const repos = useRepoStore((s) => s.repos);
   const removeRepo = useRepoStore((s) => s.removeRepo);
+  const enabledDepTypes = useSettingsStore((s) => s.enabledDepTypes);
+  const toggleDepType = useSettingsStore((s) => s.toggleDepType);
   const [addOpen, setAddOpen] = useState(false);
 
   return (
-    <div className="nowheel max-h-[70vh] w-64 space-y-2 overflow-y-auto rounded-md border bg-card p-3 shadow-sm">
+    <div className="nowheel max-h-[80vh] w-64 space-y-2 overflow-y-auto rounded-md border bg-card p-3 shadow-sm">
+      <p className="text-sm font-medium text-muted-foreground">Dependencies to show</p>
+      <div className="space-y-1.5">
+        {DEP_TYPES.map((type) => (
+          <label key={type} className="flex cursor-pointer items-center gap-2 text-sm">
+            <Checkbox
+              checked={enabledDepTypes[type]}
+              onCheckedChange={() => toggleDepType(type)}
+              aria-label={DEP_TYPE_LABELS[type]}
+            />
+            <span className="font-mono">{DEP_TYPE_LABELS[type]}</span>
+          </label>
+        ))}
+        <label className="flex cursor-pointer items-center gap-2 text-sm">
+          <Checkbox
+            checked={sharedOnly}
+            onCheckedChange={(value) => onSharedOnlyChange(value === true)}
+            aria-label="Hide unique"
+          />
+          Hide unique
+        </label>
+      </div>
+
+      <Separator />
+
       <div className="flex items-center justify-between px-1">
         <p className="text-sm font-medium text-muted-foreground">
           Repositories{repos.length > 0 ? ` (${repos.length})` : ''}
@@ -50,6 +88,7 @@ export function RepoListPanel({ selectedNodeId, onSelect }: Props) {
           <TokenDialog size="icon-sm" />
         </div>
       </div>
+
       {repos.length === 0 && (
         <p className="px-1 text-sm text-muted-foreground">
           No repositories yet — use <span className="font-medium">Add repository</span>.
