@@ -106,11 +106,12 @@ export function DependencyGraph({ groups, repos }: Props) {
       for (const change of changes) {
         // Non-position changes (dimensions, select) are intentionally ignored:
         // selection is managed externally and React Flow keeps its own measurements.
-        // Intermediate drag positions are ignored too — React Flow drives the
-        // visual drag internally; committing every pointermove would rebuild the
-        // nodes array each frame and blank the graph (fresh identities lose
-        // their measured state). Only the final drop position is committed.
-        if (change.type === 'position' && change.position && change.dragging === false) {
+        // Position changes are committed on every frame so the dragged node
+        // follows the mouse (React Flow v12 controlled mode needs the loop
+        // closed through state). Only the dragged node gets a fresh identity per
+        // frame — buildFlowNodes' cache preserves every other node's measured
+        // state, so the per-frame rebuilds don't blank the canvas.
+        if (change.type === 'position' && change.position) {
           next ??= new Map(prev);
           next.set(change.id, change.position);
         }
