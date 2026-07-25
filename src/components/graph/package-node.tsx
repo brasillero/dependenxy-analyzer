@@ -1,5 +1,6 @@
 import { Handle, Position, type Node, type NodeProps } from '@xyflow/react';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { TableIcon } from '@/components/icons';
 import type { PackageNodeData } from '@/lib/graph/graph-data';
 
@@ -28,19 +29,25 @@ export function PackageNodeContent({
           </span>
         )}
         {onOpenDetails && (
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            aria-label={`Version details of ${data.packageName}`}
-            title="Open version details"
-            onClick={(event) => {
-              event.stopPropagation();
-              onOpenDetails();
-            }}
-            className="nodrag"
-          >
-            <TableIcon />
-          </Button>
+          <TooltipProvider delayDuration={300}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  aria-label={`Version details of ${data.packageName}`}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onOpenDetails();
+                  }}
+                  className="nodrag"
+                >
+                  <TableIcon />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Open version details</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         )}
       </div>
       <div className="mt-1 flex max-w-56 flex-wrap gap-1">

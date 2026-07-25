@@ -1,6 +1,7 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   Background,
   Controls,
@@ -19,12 +20,13 @@ import {
 } from '@/lib/graph/graph-data';
 import { computeHighlight } from '@/lib/graph/highlight';
 import { computeLayout } from '@/lib/graph/layout';
+import { executeAnalysis } from '@/lib/execute-analysis';
 import type { DependencyGroup } from '@/lib/types';
 import { useRepoStore } from '@/stores/repo-store';
 import { useSettingsStore } from '@/stores/settings-store';
 import { useViewStore } from '@/stores/view-store';
 import { RepoListPanel } from '@/components/panels/repo-list-panel';
-import { UtilityPanel, AnalyzeButton } from '@/components/panels/utility-panel';
+import { UtilityPanel, RefreshButton, useHasCredentials } from '@/components/panels/utility-panel';
 import { AnalysisBanner } from '@/components/analysis-banner';
 import { PackageDetailsDrawer } from './package-details-drawer';
 import { PackageNode } from './package-node';
@@ -52,6 +54,8 @@ export function DependencyGraph() {
   const analysis = useViewStore((s) => s.analysis);
   const repos = useRepoStore((s) => s.repos);
   const enabledDepTypes = useSettingsStore((s) => s.enabledDepTypes);
+  const hasCredentials = useHasCredentials();
+  const queryClient = useQueryClient();
 
   const [sharedOnly, setSharedOnly] = useState(false);
   const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(new Set());
@@ -59,6 +63,13 @@ export function DependencyGraph() {
   const [selectedRepo, setSelectedRepo] = useState<RepoNodeData | null>(null);
 
   const analyzedRepos = useMemo(() => repos, [repos]);
+
+  // Analysis is automatic: it (re)runs whenever the repo list or credentials
+  // change. The button in the utility panel is only a manual refresh.
+  useEffect(() => {
+    if (repos.length === 0 || !hasCredentials) return;
+    void executeAnalysis(repos, queryClient);
+  }, [repos, hasCredentials, queryClient]);
 
   const graphData = useMemo(() => {
     if (!analysis) return buildGraphData([], []);
@@ -165,7 +176,7 @@ export function DependencyGraph() {
         <Panel position="bottom-center">
           <div className="flex items-center gap-2">
             <UtilityPanel sharedOnly={sharedOnly} onSharedOnlyChange={setSharedOnly} />
-            <AnalyzeButton />
+            <RefreshButton />
           </div>
         </Panel>
         {!analysis && (

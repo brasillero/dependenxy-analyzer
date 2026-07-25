@@ -1,15 +1,14 @@
 'use client';
 
-import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Toggle } from '@/components/ui/toggle';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { TokenDialog } from '@/components/token-dialog';
-import { LoaderIcon, PlayIcon, UsersIcon } from '@/components/icons';
-import { runAnalysis } from '@/lib/analyze';
-import { toast } from '@/lib/toast';
+import { LoaderIcon, RefreshCwIcon, UsersIcon } from '@/components/icons';
+import { executeAnalysis } from '@/lib/execute-analysis';
 import { DEP_TYPES, type DepType } from '@/lib/types';
 import { useRepoStore } from '@/stores/repo-store';
 import { useSettingsStore } from '@/stores/settings-store';
@@ -27,6 +26,15 @@ const DEP_TYPE_SHORT: Record<DepType, string> = {
   devDependencies: 'dev',
   peerDependencies: 'peer',
 };
+
+function IconTooltip({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
+  );
+}
 
 export function useHasCredentials(): boolean {
   const githubToken = useTokenStore((s) => s.githubToken);
@@ -56,87 +64,84 @@ export function UtilityPanel({ sharedOnly, onSharedOnlyChange }: Props) {
   };
 
   return (
-    <div className="flex items-center gap-1 rounded-md border bg-card px-2 py-1 shadow-sm">
-      {!hasCredentials && (
-        <>
-          <TokenDialog />
-          <span className="px-1 text-xs text-muted-foreground">Set credentials to enable tools</span>
-          <Separator orientation="vertical" className="mx-1 h-5" />
-        </>
-      )}
-      <ToggleGroup
-        type="multiple"
-        variant="outline"
-        size="sm"
-        value={enabledTypes}
-        onValueChange={handleDepTypesChange}
-        disabled={!hasCredentials}
-      >
-        {DEP_TYPES.map((type) => (
-          <ToggleGroupItem
-            key={type}
-            value={type}
-            aria-label={DEP_TYPE_LABELS[type]}
-            title={DEP_TYPE_LABELS[type]}
+    <TooltipProvider delayDuration={300}>
+      <div className="flex items-center gap-1 rounded-md border bg-card px-2 py-1 shadow-sm">
+        {!hasCredentials && (
+          <>
+            <TokenDialog />
+            <span className="px-1 text-xs text-muted-foreground">Set credentials to enable tools</span>
+            <Separator orientation="vertical" className="mx-1 h-5" />
+          </>
+        )}
+        <span className="pl-1 text-xs text-muted-foreground">Types</span>
+        <ToggleGroup
+          type="multiple"
+          variant="outline"
+          size="sm"
+          value={enabledTypes}
+          onValueChange={handleDepTypesChange}
+          disabled={!hasCredentials}
+        >
+          {DEP_TYPES.map((type) => (
+            <IconTooltip key={type} label={DEP_TYPE_LABELS[type]}>
+              <ToggleGroupItem value={type} aria-label={DEP_TYPE_LABELS[type]}>
+                {DEP_TYPE_SHORT[type]}
+              </ToggleGroupItem>
+            </IconTooltip>
+          ))}
+        </ToggleGroup>
+        <IconTooltip label="Show shared only">
+          <Toggle
+            size="sm"
+            variant="outline"
+            pressed={sharedOnly}
+            onPressedChange={onSharedOnlyChange}
+            aria-label="Show shared only"
+            disabled={!hasCredentials}
           >
-            {DEP_TYPE_SHORT[type]}
-          </ToggleGroupItem>
-        ))}
-      </ToggleGroup>
-      <Toggle
-        size="sm"
-        variant="outline"
-        pressed={sharedOnly}
-        onPressedChange={onSharedOnlyChange}
-        aria-label="Show shared only"
-        title="Show shared only"
-        disabled={!hasCredentials}
-      >
-        <UsersIcon className="h-4 w-4" />
-      </Toggle>
-    </div>
+            <UsersIcon className="h-4 w-4" />
+            Shared
+          </Toggle>
+        </IconTooltip>
+      </div>
+    </TooltipProvider>
   );
 }
 
-/** Primary Analyze action — sits outside the utility panel, to its right. */
-export function AnalyzeButton() {
+/**
+ * Manual refresh — the analysis itself is automatic (it runs when the repo
+ * list or credentials change); this only forces a re-run.
+ */
+export function RefreshButton() {
   const repos = useRepoStore((s) => s.repos);
   const hasCredentials = useHasCredentials();
-  const [analyzing, setAnalyzing] = useState(false);
+  const analyzing = useViewStore((s) => s.analyzing);
   const queryClient = useQueryClient();
 
   const disabled = repos.length === 0 || analyzing || !hasCredentials;
-  const title = !hasCredentials
+  const tooltip = !hasCredentials
     ? 'Set credentials first'
     : repos.length === 0
       ? 'Add a repository first'
-      : 'Analyze';
-
-  const handleAnalyze = async () => {
-    if (disabled) return;
-    setAnalyzing(true);
-    try {
-      const { groups, failed } = await runAnalysis(repos, queryClient);
-      useViewStore.getState().setAnalysis(groups, failed, failed.length === repos.length);
-      if (failed.length === repos.length) {
-        toast.error('No repository could be analyzed.');
-      }
-    } catch {
-      toast.error('Analysis failed unexpectedly.');
-    } finally {
-      setAnalyzing(false);
-    }
-  };
+      : 'Refresh analysis';
 
   return (
-    <Button
-      size="icon"
-      onClick={handleAnalyze}
-      disabled={disabled}
-      aria-label="Analyze"
-      title={analyzing ? 'Analyzing…' : title}
-    >
-      {analyzing ? <LoaderIcon className="h-4 w-4 animate-spin" /> : <PlayIcon className="h-4 w-4" />}
-    </Button>
+    <TooltipProvider delayDuration={300}>
+      <IconTooltip label={analyzing ? 'Analyzing…' : tooltip}>
+        <Button
+          size="sm"
+          onClick={() => executeAnalysis(repos, queryClient)}
+          disabled={disabled}
+          aria-label="Refresh analysis"
+        >
+          {analyzing ? (
+            <LoaderIcon className="h-4 w-4 animate-spin" />
+          ) : (
+            <RefreshCwIcon className="h-4 w-4" />
+          )}
+          Refresh
+        </Button>
+      </IconTooltip>
+    </TooltipProvider>
   );
 }

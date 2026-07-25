@@ -11,6 +11,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { KeyIcon } from '@/components/icons';
 import { DEFAULT_GITLAB_HOST, useTokenStore } from '@/stores/token-store';
 import { useRepoStore } from '@/stores/repo-store';
@@ -36,17 +37,18 @@ export function TokenDialog({ size = 'icon' }: { size?: 'icon' | 'icon-xs' | 'ic
   }, [repos]);
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button
-          variant="ghost"
-          size={size}
-          aria-label="Access Tokens"
-          title={hasCredentials ? 'Access Tokens' : 'Set your credentials'}
-        >
-          <KeyIcon className="h-4 w-4" />
-        </Button>
-      </DialogTrigger>
+    <TooltipProvider delayDuration={300}>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <DialogTrigger asChild>
+              <Button variant="ghost" size={size} aria-label="Access Tokens">
+                <KeyIcon className="h-4 w-4" />
+              </Button>
+            </DialogTrigger>
+          </TooltipTrigger>
+          <TooltipContent>{hasCredentials ? 'Access Tokens' : 'Set your credentials'}</TooltipContent>
+        </Tooltip>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Access Tokens</DialogTitle>
@@ -93,5 +95,6 @@ export function TokenDialog({ size = 'icon' }: { size?: 'icon' | 'icon-xs' | 'ic
         </div>
       </DialogContent>
     </Dialog>
+    </TooltipProvider>
   );
 }
