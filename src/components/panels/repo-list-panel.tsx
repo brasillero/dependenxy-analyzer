@@ -2,7 +2,6 @@
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { BranchSelector } from '@/components/branch-selector';
 import { XIcon } from '@/components/icons';
 import { cn } from '@/lib/utils';
 import { useRepoStore } from '@/stores/repo-store';
@@ -13,18 +12,23 @@ interface Props {
   onSelect: (nodeId: string | null) => void;
 }
 
-/** Floating repository list panel — single selection, mirrored to canvas selection. */
+/** Last path segment for compact display ('group/sub/project' -> 'project'). */
+function shortName(displayName: string): string {
+  return displayName.split('/').filter(Boolean).pop() ?? displayName;
+}
+
+/** Floating repository list panel — compact, single selection, mirrored to canvas. */
 export function RepoListPanel({ selectedNodeId, onSelect }: Props) {
   const repos = useRepoStore((s) => s.repos);
   const removeRepo = useRepoStore((s) => s.removeRepo);
 
   return (
-    <div className="nowheel max-h-[70vh] w-72 space-y-2 overflow-y-auto rounded-md border bg-card p-3 shadow-sm">
-      <p className="text-xs font-medium text-muted-foreground">
+    <div className="nowheel max-h-[70vh] w-56 space-y-1.5 overflow-y-auto rounded-md border bg-card p-2 shadow-sm">
+      <p className="px-1 text-xs font-medium text-muted-foreground">
         Repositories{repos.length > 0 ? ` (${repos.length})` : ''}
       </p>
       {repos.length === 0 && (
-        <p className="text-xs text-muted-foreground">
+        <p className="px-1 text-xs text-muted-foreground">
           No repositories yet — use <span className="font-medium">Add repository</span>.
         </p>
       )}
@@ -45,39 +49,36 @@ export function RepoListPanel({ selectedNodeId, onSelect }: Props) {
               }
             }}
             className={cn(
-              'cursor-pointer space-y-2 rounded-md border p-2.5 transition-colors',
+              'flex cursor-pointer items-center gap-1.5 rounded-md border px-2 py-1.5 transition-colors',
               selected && 'border-primary ring-1 ring-primary',
             )}
           >
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <p className="truncate font-mono text-sm font-medium" title={repo.displayName}>
-                  {repo.displayName}
-                </p>
-                <div className="mt-1 flex flex-wrap gap-1">
-                  <Badge variant="secondary">{repo.provider === 'github' ? 'GitHub' : 'GitLab'}</Badge>
-                  {repo.provider === 'gitlab' && repo.host !== 'gitlab.com' && (
-                    <Badge variant="outline">{repo.host}</Badge>
-                  )}
-                </div>
+            <div className="min-w-0 flex-1" title={repo.displayName}>
+              <p className="truncate font-mono text-xs font-medium">{shortName(repo.displayName)}</p>
+              <div className="mt-0.5 flex flex-wrap gap-1">
+                <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
+                  {repo.provider === 'github' ? 'GitHub' : 'GitLab'}
+                </Badge>
+                {repo.provider === 'gitlab' && repo.host !== 'gitlab.com' && (
+                  <Badge variant="outline" className="px-1.5 py-0 text-[10px]">
+                    {repo.host}
+                  </Badge>
+                )}
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 shrink-0"
-                aria-label={`Remove ${repo.displayName}`}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  if (selected) onSelect(null);
-                  removeRepo(repo.id);
-                }}
-              >
-                <XIcon className="h-4 w-4" />
-              </Button>
             </div>
-            <div onClick={(event) => event.stopPropagation()}>
-              <BranchSelector repo={repo} />
-            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-5 w-5 shrink-0"
+              aria-label={`Remove ${repo.displayName}`}
+              onClick={(event) => {
+                event.stopPropagation();
+                if (selected) onSelect(null);
+                removeRepo(repo.id);
+              }}
+            >
+              <XIcon className="h-3.5 w-3.5" />
+            </Button>
           </div>
         );
       })}
