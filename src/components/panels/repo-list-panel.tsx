@@ -21,22 +21,22 @@ function shortName(displayName: string): string {
   return displayName.split('/').filter(Boolean).pop() ?? displayName;
 }
 
-/** Floating repository list panel — compact, single selection, mirrored to canvas. */
+/** Floating repository list panel — single selection, mirrored to canvas. */
 export function RepoListPanel({ selectedNodeId, onSelect }: Props) {
   const repos = useRepoStore((s) => s.repos);
   const removeRepo = useRepoStore((s) => s.removeRepo);
   const [addOpen, setAddOpen] = useState(false);
 
   return (
-    <div className="nowheel max-h-[70vh] w-56 space-y-1.5 overflow-y-auto rounded-md border bg-card p-2 shadow-sm">
+    <div className="nowheel max-h-[70vh] w-64 space-y-2 overflow-y-auto rounded-md border bg-card p-3 shadow-sm">
       <div className="flex items-center justify-between px-1">
-        <p className="text-xs font-medium text-muted-foreground">
+        <p className="text-sm font-medium text-muted-foreground">
           Repositories{repos.length > 0 ? ` (${repos.length})` : ''}
         </p>
         <div className="flex items-center">
           <Dialog open={addOpen} onOpenChange={setAddOpen}>
             <DialogTrigger asChild>
-              <Button variant="ghost" size="icon-xs" aria-label="Add repository" title="Add repository">
+              <Button variant="ghost" size="icon-sm" aria-label="Add repository">
                 <PlusIcon />
               </Button>
             </DialogTrigger>
@@ -47,11 +47,11 @@ export function RepoListPanel({ selectedNodeId, onSelect }: Props) {
               <AddRepoForm onAdded={() => setAddOpen(false)} />
             </DialogContent>
           </Dialog>
-          <TokenDialog size="icon-xs" />
+          <TokenDialog size="icon-sm" />
         </div>
       </div>
       {repos.length === 0 && (
-        <p className="px-1 text-xs text-muted-foreground">
+        <p className="px-1 text-sm text-muted-foreground">
           No repositories yet — use <span className="font-medium">Add repository</span>.
         </p>
       )}
@@ -72,23 +72,19 @@ export function RepoListPanel({ selectedNodeId, onSelect }: Props) {
               }
             }}
             className={cn(
-              'flex cursor-pointer items-center gap-1.5 rounded-md border px-2 py-1.5 transition-colors',
+              'flex cursor-pointer items-center gap-2 rounded-md border p-2.5 transition-colors',
               selected && 'border-primary ring-1 ring-primary',
             )}
           >
             <div className="min-w-0 flex-1" title={repo.displayName}>
-              <p className="truncate font-mono text-xs font-medium">{shortName(repo.displayName)}</p>
-              <div className="mt-0.5 flex flex-wrap gap-1">
-                <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
-                  {repo.provider === 'github' ? 'GitHub' : 'GitLab'}
-                </Badge>
+              <p className="truncate font-mono text-sm font-medium">{shortName(repo.displayName)}</p>
+              <div className="mt-1 flex flex-wrap gap-1">
+                <Badge variant="secondary">{repo.provider === 'github' ? 'GitHub' : 'GitLab'}</Badge>
                 {repo.provider === 'gitlab' && repo.host !== 'gitlab.com' && (
-                  <Badge variant="outline" className="px-1.5 py-0 text-[10px]">
-                    {repo.host}
-                  </Badge>
+                  <Badge variant="outline">{repo.host}</Badge>
                 )}
                 {(repo.selectedBranch ?? repo.defaultBranch) && (
-                  <Badge variant="outline" className="px-1.5 py-0 font-mono text-[10px]">
+                  <Badge variant="outline" className="font-mono">
                     {repo.selectedBranch ?? repo.defaultBranch}
                   </Badge>
                 )}
@@ -96,7 +92,7 @@ export function RepoListPanel({ selectedNodeId, onSelect }: Props) {
             </div>
             <Button
               variant="ghost"
-              size="icon-xs"
+              size="icon-sm"
               aria-label={`Remove ${repo.displayName}`}
               onClick={(event) => {
                 event.stopPropagation();
