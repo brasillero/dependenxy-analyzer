@@ -32,15 +32,16 @@ const drifted: PackageNodeData = {
 };
 
 describe('PackageDetailsDrawer', () => {
-  it('renders a row per project with repo, branch, version and status', () => {
+  it('renders a row per project with short repo name, branch badge and version — no status column', () => {
     render(<PackageDetailsDrawer packageData={drifted} onClose={() => {}} />);
     expect(screen.getByText('react')).toBeInTheDocument();
-    expect(screen.getByText(/acme\/a/)).toBeInTheDocument();
-    expect(screen.getByText(/acme\/b/)).toBeInTheDocument();
+    expect(screen.getByText('a / a')).toBeInTheDocument();
+    expect(screen.getByText('b / b')).toBeInTheDocument();
     expect(screen.getByText('develop')).toBeInTheDocument();
     expect(screen.getByText('^17.0.2')).toBeInTheDocument();
-    expect(screen.getByText('most common')).toBeInTheDocument();
-    expect(screen.getByText('divergent')).toBeInTheDocument();
+    expect(screen.queryByText('Status')).not.toBeInTheDocument();
+    expect(screen.queryByText('most common')).not.toBeInTheDocument();
+    expect(screen.queryByText('divergent')).not.toBeInTheDocument();
   });
 
   it('shows the count of distinct versions in the header', () => {
@@ -48,14 +49,13 @@ describe('PackageDetailsDrawer', () => {
     expect(screen.getByText('2 versions')).toBeInTheDocument();
   });
 
-  it('shows aligned status when there is no drift', () => {
+  it('shows the aligned description when there is no drift', () => {
     const aligned: PackageNodeData = {
       ...drifted,
       hasVersionDrift: false,
       versions: [{ ...drifted.versions[0], status: 'aligned' }],
     };
     render(<PackageDetailsDrawer packageData={aligned} onClose={() => {}} />);
-    expect(screen.getByText('aligned')).toBeInTheDocument();
     expect(screen.getByText(/same version range/i)).toBeInTheDocument();
     expect(screen.getByText('1 version')).toBeInTheDocument();
   });
