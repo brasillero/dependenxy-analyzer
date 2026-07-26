@@ -1,4 +1,5 @@
 import { Handle, Position, type Node, type NodeProps } from '@xyflow/react';
+import type { CSSProperties } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -22,8 +23,13 @@ export function PackageNodeContent({
         'rounded-full border bg-card px-3 py-1.5 shadow-sm',
         data.hasVersionDrift && 'border-orange-500/60 bg-orange-50 ring-1 ring-orange-500/30 dark:bg-orange-950',
         data.isShared && !data.hasVersionDrift && 'border-green-500/60 bg-green-50 ring-1 ring-green-500/30 dark:bg-green-950',
+        data.accentColor && 'ring-1',
       )}
-      style={data.accentColor ? { borderColor: data.accentColor } : undefined}
+      style={
+        data.accentColor
+          ? ({ borderColor: data.accentColor, '--tw-ring-color': data.accentColor } as CSSProperties)
+          : undefined
+      }
       title={onOpenDetails ? `${data.packageName} — click for version details` : data.packageName}
     >
       <div className="flex items-center gap-2">
