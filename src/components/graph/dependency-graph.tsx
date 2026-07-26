@@ -23,6 +23,7 @@ import {
 } from '@/lib/graph/graph-data';
 import { computeHighlight } from '@/lib/graph/highlight';
 import { computeLayout } from '@/lib/graph/layout';
+import { cn } from '@/lib/utils';
 import { executeAnalysis } from '@/lib/execute-analysis';
 import { useHasCredentials } from '@/stores/token-store';
 import type { DependencyGroup } from '@/lib/types';
@@ -294,7 +295,7 @@ export function DependencyGraph() {
   }, []);
 
   return (
-    <div className="relative h-full w-full">
+    <div className={cn('relative h-full w-full', animateEdges && 'animated-nodes')}>
       <ReactFlow
         key={analysis ? 'analysis' : 'idle'}
         nodes={nodes}

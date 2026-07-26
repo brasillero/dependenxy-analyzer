@@ -140,3 +140,11 @@
   stroke-dasharray: 6;
   animation: dependency-edge-flow 0.5s linear infinite;
 }
+
+/* Smooth node position changes (layout recomputes, filter toggles). Only
+   under .animated-nodes (the "Enable animations" setting) and never while
+   dragging — a transition during drag would rubber-band the node behind
+   the cursor. Pan/zoom is unaffected (viewport transform, not the node's). */
+.animated-nodes .react-flow__node:not(.dragging) {
+  transition: transform 300ms ease;
+}
