@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   Background,
@@ -56,18 +56,26 @@ function FitOnDataChange() {
 }
 
 /** Re-fits the viewport onto the selection and its connected nodes when the setting is on. */
-function FitOnSelection({ nodeIds }: { nodeIds: ReadonlySet<string> | null }) {
+function FitOnSelection({
+  nodeIds,
+  draggingRef,
+}: {
+  nodeIds: ReadonlySet<string> | null;
+  draggingRef: RefObject<boolean>;
+}) {
   const { fitView } = useReactFlow();
   const autoFitSelection = useSettingsStore((s) => s.autoFitSelection);
   useEffect(() => {
     if (!autoFitSelection || !nodeIds || nodeIds.size === 0) return;
     const nodes = [...nodeIds].map((id) => ({ id }));
-    const timer = setTimeout(
-      () => fitView({ nodes, padding: 0.4, duration: 300, maxZoom: 1.5 }),
-      50,
-    );
+    const timer = setTimeout(() => {
+      // Selection fires on pointer-down, before drag intent is known — bail
+      // out if the press turned into a drag in the meantime.
+      if (draggingRef.current) return;
+      fitView({ nodes, padding: 0.4, duration: 300, maxZoom: 1.5 });
+    }, 50);
     return () => clearTimeout(timer);
-  }, [nodeIds, autoFitSelection, fitView]);
+  }, [nodeIds, autoFitSelection, fitView, draggingRef]);
   return null;
 }
 
@@ -95,6 +103,17 @@ export function DependencyGraph() {
   const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(new Set());
   const [selectedPackage, setSelectedPackage] = useState<PackageNodeData | null>(null);
   const [selectedRepo, setSelectedRepo] = useState<RepoNodeData | null>(null);
+
+  // Set while a node (or multi-selection) drag is in flight. Selection fires
+  // on pointer-down — before drag intent is knowable — so FitOnSelection
+  // consults this ref to skip auto-fitting drags.
+  const draggingRef = useRef(false);
+  const handleDragStart = useCallback(() => {
+    draggingRef.current = true;
+  }, []);
+  const handleDragStop = useCallback(() => {
+    draggingRef.current = false;
+  }, []);
 
   const analyzedRepos = useMemo(() => repos, [repos]);
 
@@ -272,11 +291,15 @@ export function DependencyGraph() {
         minZoom={0.05}
         onNodesChange={onNodesChange}
         onNodeDoubleClick={handleNodeDoubleClick}
+        onNodeDragStart={handleDragStart}
+        onNodeDragStop={handleDragStop}
+        onSelectionDragStart={handleDragStart}
+        onSelectionDragStop={handleDragStop}
       >
         <Background />
         <Controls />
         <FitOnDataChange />
-        <FitOnSelection nodeIds={highlight ? highlight.nodeIds : null} />
+        <FitOnSelection nodeIds={highlight ? highlight.nodeIds : null} draggingRef={draggingRef} />
         <Panel position="top-right">
           <div className="flex w-64 flex-col gap-2">
             <RefreshButton />
