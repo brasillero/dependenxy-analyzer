@@ -32,14 +32,14 @@ export function PackageNodeContent({
               event.stopPropagation();
               onOpenDetails();
             }}
-            className="nodrag h-auto max-w-40 truncate p-0 font-mono text-xs font-bold"
+            className="nodrag h-auto max-w-40 truncate p-0 font-mono text-xs font-medium"
             title={data.packageName}
           >
             {data.packageName}
           </Button>
         ) : (
           <span
-            className="inline-block max-w-40 truncate font-mono text-xs font-bold"
+            className="inline-block max-w-40 truncate font-mono text-xs font-medium"
             title={data.packageName}
           >
             {data.packageName}
