@@ -101,6 +101,7 @@ export function DependencyGraph() {
   const compactNodes = useSettingsStore((s) => s.compactNodes);
   const compactMode = useSettingsStore((s) => s.compactMode);
   const animateEdges = useSettingsStore((s) => s.animateEdges);
+  const edgeType = useSettingsStore((s) => s.edgeType);
   const hasCredentials = useHasCredentials();
   const queryClient = useQueryClient();
 
@@ -252,6 +253,7 @@ export function DependencyGraph() {
           target: edge.target,
           type: 'dependency',
           animated: isHighlighted && animateEdges,
+          data: { edgeType },
           style: {
             stroke: edge.stroke,
             strokeWidth: isHighlighted ? 2.5 : 1.5,
@@ -259,7 +261,7 @@ export function DependencyGraph() {
           },
         };
       }),
-    [graphData, highlight, animateEdges],
+    [graphData, highlight, animateEdges, edgeType],
   );
 
   const handlePanelSelect = useCallback(

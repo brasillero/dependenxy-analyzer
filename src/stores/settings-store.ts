@@ -17,6 +17,9 @@ interface SettingsState {
   /** When on, highlighted edges play the marching-ants flow animation. */
   animateEdges: boolean;
   toggleAnimateEdges: () => void;
+  /** Curve style used to draw dependency edges. */
+  edgeType: 'straight' | 'bezier' | 'smoothstep' | 'step';
+  setEdgeType: (type: 'straight' | 'bezier' | 'smoothstep' | 'step') => void;
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -39,6 +42,8 @@ export const useSettingsStore = create<SettingsState>()(
       setCompactMode: (mode) => set({ compactMode: mode }),
       animateEdges: true,
       toggleAnimateEdges: () => set((state) => ({ animateEdges: !state.animateEdges })),
+      edgeType: 'straight',
+      setEdgeType: (type) => set({ edgeType: type }),
     }),
     {
       name: 'rda-settings',

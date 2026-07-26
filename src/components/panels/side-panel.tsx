@@ -44,6 +44,8 @@ export function SidePanel({ selectedNodeId, onSelect, sharedOnly, onSharedOnlyCh
   const setCompactMode = useSettingsStore((s) => s.setCompactMode);
   const animateEdges = useSettingsStore((s) => s.animateEdges);
   const toggleAnimateEdges = useSettingsStore((s) => s.toggleAnimateEdges);
+  const edgeType = useSettingsStore((s) => s.edgeType);
+  const setEdgeType = useSettingsStore((s) => s.setEdgeType);
   const [addOpen, setAddOpen] = useState(false);
 
   return (
@@ -90,6 +92,33 @@ export function SidePanel({ selectedNodeId, onSelect, sharedOnly, onSharedOnlyCh
             aria-label="Enable animations"
           />
         </label>
+        <div className="space-y-1.5">
+          <p className="text-sm">Edge type</p>
+          <ToggleGroup
+            type="single"
+            variant="outline"
+            size="sm"
+            className="w-full"
+            value={edgeType}
+            onValueChange={(value) => {
+              if (value) setEdgeType(value as 'straight' | 'bezier' | 'smoothstep' | 'step');
+            }}
+            aria-label="Edge type"
+          >
+            <ToggleGroupItem value="straight" className="flex-1" aria-label="Straight edges">
+              line
+            </ToggleGroupItem>
+            <ToggleGroupItem value="bezier" className="flex-1" aria-label="Bezier edges">
+              curve
+            </ToggleGroupItem>
+            <ToggleGroupItem value="smoothstep" className="flex-1" aria-label="Smooth step edges">
+              soft
+            </ToggleGroupItem>
+            <ToggleGroupItem value="step" className="flex-1" aria-label="Step edges">
+              step
+            </ToggleGroupItem>
+          </ToggleGroup>
+        </div>
         <label className="flex cursor-pointer items-center justify-between gap-2 text-sm">
           Compact nodes
           <Switch

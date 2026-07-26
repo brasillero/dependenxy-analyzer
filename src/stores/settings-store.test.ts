@@ -9,6 +9,7 @@ beforeEach(() => {
     compactNodes: false,
     compactMode: 'all',
     animateEdges: true,
+    edgeType: 'straight',
   });
 });
 
@@ -51,5 +52,13 @@ describe('settings-store', () => {
     expect(useSettingsStore.getState().animateEdges).toBe(true);
     useSettingsStore.getState().toggleAnimateEdges();
     expect(useSettingsStore.getState().animateEdges).toBe(false);
+  });
+
+  it('switches edge type', () => {
+    expect(useSettingsStore.getState().edgeType).toBe('straight');
+    useSettingsStore.getState().setEdgeType('bezier');
+    expect(useSettingsStore.getState().edgeType).toBe('bezier');
+    useSettingsStore.getState().setEdgeType('step');
+    expect(useSettingsStore.getState().edgeType).toBe('step');
   });
 });
