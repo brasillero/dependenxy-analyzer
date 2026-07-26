@@ -55,19 +55,19 @@ function FitOnDataChange() {
   return null;
 }
 
-/** Re-fits the viewport onto the current selection when the setting is on. */
-function FitOnSelection({ selectedIds }: { selectedIds: ReadonlySet<string> }) {
+/** Re-fits the viewport onto the selection and its connected nodes when the setting is on. */
+function FitOnSelection({ nodeIds }: { nodeIds: ReadonlySet<string> | null }) {
   const { fitView } = useReactFlow();
   const autoFitSelection = useSettingsStore((s) => s.autoFitSelection);
   useEffect(() => {
-    if (!autoFitSelection || selectedIds.size === 0) return;
-    const nodes = [...selectedIds].map((id) => ({ id }));
+    if (!autoFitSelection || !nodeIds || nodeIds.size === 0) return;
+    const nodes = [...nodeIds].map((id) => ({ id }));
     const timer = setTimeout(
       () => fitView({ nodes, padding: 0.4, duration: 300, maxZoom: 1.5 }),
       50,
     );
     return () => clearTimeout(timer);
-  }, [selectedIds, autoFitSelection, fitView]);
+  }, [nodeIds, autoFitSelection, fitView]);
   return null;
 }
 
@@ -275,7 +275,7 @@ export function DependencyGraph() {
         <Background />
         <Controls />
         <FitOnDataChange />
-        <FitOnSelection selectedIds={selectedIds} />
+        <FitOnSelection nodeIds={highlight ? highlight.nodeIds : null} />
         <Panel position="top-right">
           <div className="flex w-64 flex-col gap-2">
             <RefreshButton />
