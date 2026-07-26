@@ -1,7 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type RefObject, type SetStateAction } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { timer } from 'd3-timer';
 import {
   Background,
   Controls,
@@ -23,7 +24,6 @@ import {
 } from '@/lib/graph/graph-data';
 import { computeHighlight } from '@/lib/graph/highlight';
 import { computeLayout } from '@/lib/graph/layout';
-import { cn } from '@/lib/utils';
 import { executeAnalysis } from '@/lib/execute-analysis';
 import { useHasCredentials } from '@/stores/token-store';
 import type { DependencyGroup } from '@/lib/types';
@@ -44,6 +44,61 @@ const nodeTypes = { repo: RepoNode, package: PackageNode };
 const edgeTypes = { dependency: DependencyEdge };
 
 const DIMMED_OPACITY = 0.25;
+const LAYOUT_ANIMATION_MS = 300;
+
+/**
+ * Glides nodes to freshly computed layout positions (d3-timer interpolation,
+ * the official node-position-animation approach) so edges recompute every
+ * frame and follow the nodes. Runs only on a layoutVersion bump (new
+ * analysis / manual refresh); skipped entirely when animations are disabled.
+ */
+function LayoutAnimator({
+  baseNodes,
+  setNodes,
+  draggingRef,
+}: {
+  baseNodes: Node[];
+  setNodes: Dispatch<SetStateAction<Node[]>>;
+  draggingRef: RefObject<boolean>;
+}) {
+  const layoutVersion = useViewStore((s) => s.layoutVersion);
+  const animateEdges = useSettingsStore((s) => s.animateEdges);
+  const prevLayoutVersionRef = useRef(layoutVersion);
+  useEffect(() => {
+    if (prevLayoutVersionRef.current === layoutVersion) return;
+    prevLayoutVersionRef.current = layoutVersion;
+    if (!animateEdges) return; // the parent already jumped to the new layout
+    const targets = new Map(baseNodes.map((node) => [node.id, node.position]));
+    let starts: Map<string, { x: number; y: number }> | null = null;
+    const animation = timer((elapsed) => {
+      // A drag mid-animation wins — stop interpolating immediately.
+      if (draggingRef.current) {
+        animation.stop();
+        return;
+      }
+      const t = Math.min(1, elapsed / LAYOUT_ANIMATION_MS);
+      const eased = 1 - Math.pow(1 - t, 3); // easeOutCubic
+      setNodes((current) => {
+        starts ??= new Map(current.map((node) => [node.id, node.position]));
+        return current.map((node) => {
+          const start = starts!.get(node.id);
+          const target = targets.get(node.id);
+          if (!start || !target) return node;
+          return {
+            ...node,
+            position: {
+              x: start.x + (target.x - start.x) * eased,
+              y: start.y + (target.y - start.y) * eased,
+            },
+          };
+        });
+      });
+      if (t >= 1) animation.stop();
+    });
+    return () => animation.stop();
+  }, [layoutVersion, baseNodes, animateEdges, setNodes, draggingRef]);
+  return null;
+}
 
 /** Re-fits the viewport whenever the analysis or a forced re-layout lands. */
 function FitOnDataChange() {
@@ -198,15 +253,29 @@ export function DependencyGraph() {
   // Re-sync from the derived nodes only when the inputs change (new analysis,
   // filter toggle, highlight change) — preserving dragged positions and
   // selection of surviving nodes. Render-time adjustment (no effect needed).
-  // A layoutVersion bump (manual refresh) instead resets everything to the
-  // freshly computed layout, dropping dragged positions.
+  // A layoutVersion bump (manual refresh) instead adopts the freshly computed
+  // layout: instantly when animations are off, or via LayoutAnimator gliding
+  // each node from its current spot (d3-timer, so edges follow every frame).
   const layoutVersion = useViewStore((s) => s.layoutVersion);
   const [prevLayoutVersion, setPrevLayoutVersion] = useState(layoutVersion);
   const [prevBaseNodes, setPrevBaseNodes] = useState(baseNodes);
   if (prevLayoutVersion !== layoutVersion) {
     setPrevLayoutVersion(layoutVersion);
     setPrevBaseNodes(baseNodes);
-    setNodes(baseNodes);
+    if (animateEdges) {
+      // Keep current positions; LayoutAnimator interpolates toward baseNodes.
+      setNodes((current) => {
+        const positionsById = new Map(current.map((node) => [node.id, node.position]));
+        const selectedById = new Set(current.filter((node) => node.selected).map((node) => node.id));
+        return baseNodes.map((node) => {
+          const position = positionsById.get(node.id);
+          if (!position) return node;
+          return { ...node, position, selected: selectedById.has(node.id) };
+        });
+      });
+    } else {
+      setNodes(baseNodes);
+    }
   } else if (prevBaseNodes !== baseNodes) {
     setPrevBaseNodes(baseNodes);
     setNodes((current) => {
@@ -295,7 +364,7 @@ export function DependencyGraph() {
   }, []);
 
   return (
-    <div className={cn('relative h-full w-full', animateEdges && 'animated-nodes')}>
+    <div className="relative h-full w-full">
       <ReactFlow
         key={analysis ? 'analysis' : 'idle'}
         nodes={nodes}
@@ -315,6 +384,7 @@ export function DependencyGraph() {
         <Controls />
         <FitOnDataChange />
         <FitOnSelection nodeIds={highlight ? highlight.nodeIds : null} draggingRef={draggingRef} />
+        <LayoutAnimator baseNodes={baseNodes} setNodes={setNodes} draggingRef={draggingRef} />
         <Panel position="top-right">
           <div className="flex w-64 flex-col gap-2">
             <RefreshButton />
