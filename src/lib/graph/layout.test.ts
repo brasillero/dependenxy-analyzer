@@ -69,6 +69,26 @@ describe('computeLayout', () => {
     expect(Math.hypot(a.x - b.x, a.y - b.y)).toBeGreaterThanOrEqual(200);
   });
 
+  it('keeps repos separated when only shared packages remain ("Only shared" mode)', () => {
+    const onlySharedNodes = [
+      { id: 'repo_a', type: 'repo' as const },
+      { id: 'repo_b', type: 'repo' as const },
+      ...Array.from({ length: 8 }, (_, i) => ({ id: `pkg_${i}`, type: 'package' as const })),
+    ];
+    const onlySharedLinks = onlySharedNodes
+      .filter((node) => node.type === 'package')
+      .flatMap((pkg) => [
+        { source: 'repo_a', target: pkg.id },
+        { source: 'repo_b', target: pkg.id },
+      ]);
+    const positions = computeLayout(onlySharedNodes, onlySharedLinks, WIDTH, HEIGHT);
+    const repoA = positions.get('repo_a')!;
+    const repoB = positions.get('repo_b')!;
+    // With the old uniform charge the repos collapsed onto each other (~180px,
+    // exactly the two collide radii). The per-type charge must keep nuclei apart.
+    expect(Math.hypot(repoA.x - repoB.x, repoA.y - repoB.y)).toBeGreaterThan(300);
+  });
+
   it('is deterministic: same input yields identical positions', () => {
     const first = computeLayout(nodes, links, WIDTH, HEIGHT);
     const second = computeLayout(nodes, links, WIDTH, HEIGHT);

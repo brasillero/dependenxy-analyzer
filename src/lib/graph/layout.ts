@@ -43,7 +43,13 @@ export function computeLayout(
     .map((link) => ({ ...link }));
 
   const simulation = forceSimulation(simNodes)
-    .force('charge', forceManyBody().strength(-500))
+    // Per-type charge: repos repel hard so nuclei never clump (critical when
+    // 'Only shared' removes the unique packages that otherwise push repos
+    // apart); packages repel gently so they keep orbiting their repo.
+    .force(
+      'charge',
+      forceManyBody<SimNode>().strength((node) => (node.type === 'repo' ? -3000 : -300)),
+    )
     .force('center', forceCenter(width / 2, height / 2))
     .force(
       'link',
@@ -51,7 +57,7 @@ export function computeLayout(
         .id((node) => node.id)
         .distance(160),
     )
-    .force('collide', forceCollide<SimNode>((node) => (node.type === 'repo' ? 90 : 120)))
+    .force('collide', forceCollide<SimNode>((node) => (node.type === 'repo' ? 200 : 120)))
     .stop();
 
   for (let i = 0; i < SIMULATION_TICKS; i += 1) {
