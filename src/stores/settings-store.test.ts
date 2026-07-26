@@ -6,6 +6,8 @@ beforeEach(() => {
   useSettingsStore.setState({
     enabledDepTypes: { dependencies: true, devDependencies: true, peerDependencies: true },
     autoFitSelection: true,
+    compactNodes: false,
+    compactMode: 'all',
   });
 });
 
@@ -33,5 +35,14 @@ describe('settings-store', () => {
     expect(useSettingsStore.getState().autoFitSelection).toBe(false);
     useSettingsStore.getState().toggleAutoFitSelection();
     expect(useSettingsStore.getState().autoFitSelection).toBe(true);
+  });
+
+  it('toggles compact nodes and switches compact mode', () => {
+    expect(useSettingsStore.getState().compactNodes).toBe(false);
+    useSettingsStore.getState().toggleCompactNodes();
+    expect(useSettingsStore.getState().compactNodes).toBe(true);
+    expect(useSettingsStore.getState().compactMode).toBe('all');
+    useSettingsStore.getState().setCompactMode('shared');
+    expect(useSettingsStore.getState().compactMode).toBe('shared');
   });
 });

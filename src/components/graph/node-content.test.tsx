@@ -82,6 +82,15 @@ describe('PackageNodeContent', () => {
     expect(screen.queryByText(/versions/)).not.toBeInTheDocument();
   });
 
+  it('hides the badge when compact is set', () => {
+    const compacted: PackageNodeData = { ...packageData, compact: true };
+    render(<PackageNodeContent data={compacted} />);
+    expect(screen.getByText('react')).toBeInTheDocument();
+    expect(screen.queryByText(/versions/)).not.toBeInTheDocument();
+    expect(screen.queryByText('aligned')).not.toBeInTheDocument();
+    expect(screen.queryByText('^18.2.0')).not.toBeInTheDocument();
+  });
+
   it('applies the accent color as border when provided', () => {
     const accented: PackageNodeData = {
       ...packageData,

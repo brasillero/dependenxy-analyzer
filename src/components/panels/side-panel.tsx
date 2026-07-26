@@ -7,6 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { AddRepoForm } from '@/components/add-repo-form';
 import { TokenDialog } from '@/components/token-dialog';
 import { PlusIcon, XIcon } from '@/components/icons';
@@ -42,6 +43,10 @@ export function SidePanel({ selectedNodeId, onSelect, sharedOnly, onSharedOnlyCh
   const toggleDepType = useSettingsStore((s) => s.toggleDepType);
   const autoFitSelection = useSettingsStore((s) => s.autoFitSelection);
   const toggleAutoFitSelection = useSettingsStore((s) => s.toggleAutoFitSelection);
+  const compactNodes = useSettingsStore((s) => s.compactNodes);
+  const toggleCompactNodes = useSettingsStore((s) => s.toggleCompactNodes);
+  const compactMode = useSettingsStore((s) => s.compactMode);
+  const setCompactMode = useSettingsStore((s) => s.setCompactMode);
   const [addOpen, setAddOpen] = useState(false);
 
   return (
@@ -80,6 +85,36 @@ export function SidePanel({ selectedNodeId, onSelect, sharedOnly, onSharedOnlyCh
             aria-label="Fit selection"
           />
         </label>
+        <label className="flex cursor-pointer items-center justify-between gap-2 text-sm">
+          Compact nodes
+          <Switch
+            checked={compactNodes}
+            onCheckedChange={toggleCompactNodes}
+            aria-label="Compact nodes"
+          />
+        </label>
+        <ToggleGroup
+          type="single"
+          variant="outline"
+          size="sm"
+          className="w-full"
+          value={compactMode}
+          onValueChange={(value) => {
+            if (value) setCompactMode(value as 'single' | 'shared' | 'all');
+          }}
+          disabled={!compactNodes}
+          aria-label="Compact mode"
+        >
+          <ToggleGroupItem value="single" className="flex-1" aria-label="Compact single">
+            single
+          </ToggleGroupItem>
+          <ToggleGroupItem value="shared" className="flex-1" aria-label="Compact shared">
+            shared
+          </ToggleGroupItem>
+          <ToggleGroupItem value="all" className="flex-1" aria-label="Compact all">
+            all
+          </ToggleGroupItem>
+        </ToggleGroup>
       </div>
 
       <Separator />

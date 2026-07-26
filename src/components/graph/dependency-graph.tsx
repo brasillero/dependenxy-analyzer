@@ -96,6 +96,8 @@ export function DependencyGraph() {
   const analysis = useViewStore((s) => s.analysis);
   const repos = useRepoStore((s) => s.repos);
   const enabledDepTypes = useSettingsStore((s) => s.enabledDepTypes);
+  const compactNodes = useSettingsStore((s) => s.compactNodes);
+  const compactMode = useSettingsStore((s) => s.compactMode);
   const hasCredentials = useHasCredentials();
   const queryClient = useQueryClient();
 
@@ -155,15 +157,17 @@ export function DependencyGraph() {
     () =>
       [...graphData.repoNodes, ...graphData.packageNodes].map((node) => {
         const isHighlighted = !highlight || highlight.nodeIds.has(node.id);
+        const isShared = node.type === 'package' && (node.data as PackageNodeData).isShared;
         // Unique packages linked to a selected repo pick up that repo's
         // accent color on their border (their single version entry carries it).
         const accentColor =
-          node.type === 'package' &&
-          !(node.data as PackageNodeData).isShared &&
-          highlight &&
-          isHighlighted
+          node.type === 'package' && !isShared && highlight && isHighlighted
             ? (node.data as PackageNodeData).versions[0]?.repoColor
             : undefined;
+        const compact =
+          node.type === 'package' &&
+          compactNodes &&
+          (compactMode === 'all' || (compactMode === 'shared' && isShared) || (compactMode === 'single' && !isShared));
         return {
           id: node.id,
           type: node.type,
@@ -171,13 +175,13 @@ export function DependencyGraph() {
           data:
             node.type === 'repo'
               ? { ...node.data, onOpenDetails: () => setSelectedRepo(node.data as RepoNodeData) }
-              : (node.data as PackageNodeData).isShared
-                ? { ...node.data, onOpenDetails: () => setSelectedPackage(node.data as PackageNodeData) }
-                : { ...node.data, accentColor },
+              : isShared
+                ? { ...node.data, compact, onOpenDetails: () => setSelectedPackage(node.data as PackageNodeData) }
+                : { ...node.data, compact, accentColor },
           style: isHighlighted ? undefined : { opacity: DIMMED_OPACITY },
         };
       }),
-    [graphData, positions, highlight],
+    [graphData, positions, highlight, compactNodes, compactMode],
   );
 
   // Canonical controlled pattern: node state owned by useNodesState, changes

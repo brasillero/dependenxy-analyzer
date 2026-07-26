@@ -8,6 +8,12 @@ interface SettingsState {
   /** When on, the canvas zooms to fit the current selection automatically. */
   autoFitSelection: boolean;
   toggleAutoFitSelection: () => void;
+  /** Master switch for compact package nodes (badges hidden). */
+  compactNodes: boolean;
+  toggleCompactNodes: () => void;
+  /** Which package nodes compacting applies to. */
+  compactMode: 'single' | 'shared' | 'all';
+  setCompactMode: (mode: 'single' | 'shared' | 'all') => void;
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -24,6 +30,10 @@ export const useSettingsStore = create<SettingsState>()(
       autoFitSelection: true,
       toggleAutoFitSelection: () =>
         set((state) => ({ autoFitSelection: !state.autoFitSelection })),
+      compactNodes: false,
+      toggleCompactNodes: () => set((state) => ({ compactNodes: !state.compactNodes })),
+      compactMode: 'all',
+      setCompactMode: (mode) => set({ compactMode: mode }),
     }),
     {
       name: 'rda-settings',

@@ -43,6 +43,8 @@ export interface PackageNodeData extends Record<string, unknown> {
   versions: PackageVersionInfo[];
   /** Border accent applied when the owning repo node is selected (unique packages only). */
   accentColor?: string;
+  /** When true, the version/count badge is hidden (compact mode). */
+  compact?: boolean;
 }
 
 export interface GraphRepoNode {

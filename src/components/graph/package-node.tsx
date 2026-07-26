@@ -53,25 +53,26 @@ export function PackageNodeContent({
             {data.packageName}
           </span>
         )}
-        {data.hasVersionDrift ? (
-          <Badge
-            variant="outline"
-            className="border-orange-500/50 bg-orange-500/10 font-mono text-orange-700 dark:text-orange-400"
-          >
-            {distinctVersions.length} versions
-          </Badge>
-        ) : data.isShared ? (
-          <Badge
-            variant="outline"
-            className="border-green-500/50 bg-green-500/10 font-mono text-green-700 dark:text-green-400"
-          >
-            aligned
-          </Badge>
-        ) : (
-          <Badge variant="secondary" className="font-mono">
-            {distinctVersions[0]}
-          </Badge>
-        )}
+        {!data.compact &&
+          (data.hasVersionDrift ? (
+            <Badge
+              variant="outline"
+              className="border-orange-500/50 bg-orange-500/10 font-mono text-orange-700 dark:text-orange-400"
+            >
+              {distinctVersions.length} versions
+            </Badge>
+          ) : data.isShared ? (
+            <Badge
+              variant="outline"
+              className="border-green-500/50 bg-green-500/10 font-mono text-green-700 dark:text-green-400"
+            >
+              aligned
+            </Badge>
+          ) : (
+            <Badge variant="secondary" className="font-mono">
+              {distinctVersions[0]}
+            </Badge>
+          ))}
       </div>
     </div>
   );
