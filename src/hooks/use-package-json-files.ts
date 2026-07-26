@@ -7,13 +7,13 @@ export { effectiveBranch } from '@/lib/package-files';
 
 /**
  * package.json files for one repo+branch — cache keyed
- * ['pkg-files', repo.id, branch] so branch switches never share cache
+ * ['repositories', repo.id, branch] so branch switches never share cache
  * (RN RF-04.3, RN RF-05.1).
  */
 export function usePackageJsonFiles(repo: RepoConfig | null, branch: string | undefined) {
   const hasToken = useTokenStore((state) => (repo ? state.tokenFor(repo) !== null : false));
   return useQuery({
-    queryKey: ['pkg-files', repo?.id, branch],
+    queryKey: ['repositories', repo?.id, branch],
     queryFn: () => fetchPackageJsonFiles(repo!, branch!),
     enabled: repo !== null && branch !== undefined && hasToken,
   });

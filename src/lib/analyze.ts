@@ -46,7 +46,7 @@ export async function runAnalysis(
     }
     try {
       const result = await queryClient.ensureQueryData<PackageFilesResult>({
-        queryKey: ['pkg-files', repo.id, branch],
+        queryKey: ['repositories', repo.id, branch],
         queryFn: () => fetchPackageJsonFiles(repo, branch),
         staleTime: ANALYSIS_STALE_TIME,
       });
