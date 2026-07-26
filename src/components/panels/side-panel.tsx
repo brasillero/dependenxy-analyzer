@@ -62,9 +62,9 @@ export function SidePanel({ selectedNodeId, onSelect, sharedOnly, onSharedOnlyCh
           <Checkbox
             checked={sharedOnly}
             onCheckedChange={(value) => onSharedOnlyChange(value === true)}
-            aria-label="Hide unique"
+            aria-label="Only shared"
           />
-          Hide unique
+          Only shared
         </label>
       </div>
 
