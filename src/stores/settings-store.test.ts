@@ -5,6 +5,7 @@ beforeEach(() => {
   localStorage.clear();
   useSettingsStore.setState({
     enabledDepTypes: { dependencies: true, devDependencies: true, peerDependencies: true },
+    autoFitSelection: true,
   });
 });
 
@@ -24,5 +25,13 @@ describe('settings-store', () => {
     expect(useSettingsStore.getState().enabledDepTypes.dependencies).toBe(true);
     useSettingsStore.getState().toggleDepType('devDependencies');
     expect(useSettingsStore.getState().enabledDepTypes.devDependencies).toBe(true);
+  });
+
+  it('toggles auto-fit-selection on and off', () => {
+    expect(useSettingsStore.getState().autoFitSelection).toBe(true);
+    useSettingsStore.getState().toggleAutoFitSelection();
+    expect(useSettingsStore.getState().autoFitSelection).toBe(false);
+    useSettingsStore.getState().toggleAutoFitSelection();
+    expect(useSettingsStore.getState().autoFitSelection).toBe(true);
   });
 });

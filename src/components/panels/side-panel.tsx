@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
+import { Switch } from '@/components/ui/switch';
 import { AddRepoForm } from '@/components/add-repo-form';
 import { TokenDialog } from '@/components/token-dialog';
 import { PlusIcon, XIcon } from '@/components/icons';
@@ -39,6 +40,8 @@ export function SidePanel({ selectedNodeId, onSelect, sharedOnly, onSharedOnlyCh
   const removeRepo = useRepoStore((s) => s.removeRepo);
   const enabledDepTypes = useSettingsStore((s) => s.enabledDepTypes);
   const toggleDepType = useSettingsStore((s) => s.toggleDepType);
+  const autoFitSelection = useSettingsStore((s) => s.autoFitSelection);
+  const toggleAutoFitSelection = useSettingsStore((s) => s.toggleAutoFitSelection);
   const [addOpen, setAddOpen] = useState(false);
 
   return (
@@ -62,6 +65,20 @@ export function SidePanel({ selectedNodeId, onSelect, sharedOnly, onSharedOnlyCh
             aria-label="Hide unique"
           />
           Hide unique
+        </label>
+      </div>
+
+      <Separator />
+
+      <p className="text-sm font-medium text-muted-foreground">Controls</p>
+      <div className="space-y-1.5">
+        <label className="flex cursor-pointer items-center justify-between gap-2 text-sm">
+          Fit selection
+          <Switch
+            checked={autoFitSelection}
+            onCheckedChange={toggleAutoFitSelection}
+            aria-label="Fit selection"
+          />
         </label>
       </div>
 

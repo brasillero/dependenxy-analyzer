@@ -55,6 +55,22 @@ function FitOnDataChange() {
   return null;
 }
 
+/** Re-fits the viewport onto the current selection when the setting is on. */
+function FitOnSelection({ selectedIds }: { selectedIds: ReadonlySet<string> }) {
+  const { fitView } = useReactFlow();
+  const autoFitSelection = useSettingsStore((s) => s.autoFitSelection);
+  useEffect(() => {
+    if (!autoFitSelection || selectedIds.size === 0) return;
+    const nodes = [...selectedIds].map((id) => ({ id }));
+    const timer = setTimeout(
+      () => fitView({ nodes, padding: 0.4, duration: 300, maxZoom: 1.5 }),
+      50,
+    );
+    return () => clearTimeout(timer);
+  }, [selectedIds, autoFitSelection, fitView]);
+  return null;
+}
+
 /** Drop version entries whose dep types are all disabled by the header toggles. */
 function filterGroupsByDepTypes(
   groups: DependencyGroup[],
@@ -259,6 +275,7 @@ export function DependencyGraph() {
         <Background />
         <Controls />
         <FitOnDataChange />
+        <FitOnSelection selectedIds={selectedIds} />
         <Panel position="top-right">
           <div className="flex w-64 flex-col gap-2">
             <RefreshButton />

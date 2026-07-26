@@ -5,6 +5,9 @@ import type { DepType } from '@/lib/types';
 interface SettingsState {
   enabledDepTypes: Record<DepType, boolean>;
   toggleDepType: (type: DepType) => void;
+  /** When on, the canvas zooms to fit the current selection automatically. */
+  autoFitSelection: boolean;
+  toggleAutoFitSelection: () => void;
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -18,6 +21,9 @@ export const useSettingsStore = create<SettingsState>()(
             [type]: !state.enabledDepTypes[type],
           },
         })),
+      autoFitSelection: true,
+      toggleAutoFitSelection: () =>
+        set((state) => ({ autoFitSelection: !state.autoFitSelection })),
     }),
     {
       name: 'rda-settings',
