@@ -1,12 +1,13 @@
 'use client';
 
 import { useState } from 'react';
+import { useIsFetching } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AddRepoForm } from '@/components/add-repo-form';
 import { TokenDialog } from '@/components/token-dialog';
-import { CheckIcon, PlusIcon } from '@/components/icons';
+import { CheckIcon, LoaderIcon, PlusIcon } from '@/components/icons';
 import { cn } from '@/lib/utils';
 import { useHasCredentials } from '@/stores/token-store';
 import { useRepoStore } from '@/stores/repo-store';
@@ -14,11 +15,13 @@ import { useRepoStore } from '@/stores/repo-store';
 function Step({
   n,
   done,
+  loading,
   children,
   action,
 }: {
   n: number;
   done?: boolean;
+  loading?: boolean;
   children: React.ReactNode;
   action?: React.ReactNode;
 }) {
@@ -30,7 +33,13 @@ function Step({
           done && 'border-primary bg-primary text-primary-foreground',
         )}
       >
-        {done ? <CheckIcon className="size-3.5" /> : n}
+        {done ? (
+          <CheckIcon className="size-3.5" />
+        ) : loading ? (
+          <LoaderIcon className="size-3.5 animate-spin" />
+        ) : (
+          n
+        )}
       </span>
       <span className={cn('flex-1 text-sm', done && 'text-muted-foreground line-through')}>
         {children}
@@ -44,6 +53,7 @@ function Step({
 export function OnboardingCard() {
   const hasCredentials = useHasCredentials();
   const repos = useRepoStore((s) => s.repos);
+  const fetchingRepos = useIsFetching({ queryKey: ['repositories'] });
   const [addOpen, setAddOpen] = useState(false);
 
   return (
@@ -79,7 +89,9 @@ export function OnboardingCard() {
         >
           Add a repository
         </Step>
-        <Step n={3}>The analysis runs automatically — your dependency graph appears here.</Step>
+        <Step n={3} loading={fetchingRepos > 0}>
+          The analysis runs automatically — your dependency graph appears here.
+        </Step>
       </CardContent>
     </Card>
   );
