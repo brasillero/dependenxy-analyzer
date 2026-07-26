@@ -269,6 +269,7 @@ export function DependencyGraph() {
         edges={edges}
         nodeTypes={nodeTypes}
         fitView
+        minZoom={0.05}
         onNodesChange={onNodesChange}
         onNodeDoubleClick={handleNodeDoubleClick}
       >
