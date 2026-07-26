@@ -42,6 +42,8 @@ export function SidePanel({ selectedNodeId, onSelect, sharedOnly, onSharedOnlyCh
   const toggleCompactNodes = useSettingsStore((s) => s.toggleCompactNodes);
   const compactMode = useSettingsStore((s) => s.compactMode);
   const setCompactMode = useSettingsStore((s) => s.setCompactMode);
+  const animateEdges = useSettingsStore((s) => s.animateEdges);
+  const toggleAnimateEdges = useSettingsStore((s) => s.toggleAnimateEdges);
   const [addOpen, setAddOpen] = useState(false);
 
   return (
@@ -78,6 +80,14 @@ export function SidePanel({ selectedNodeId, onSelect, sharedOnly, onSharedOnlyCh
             checked={autoFitSelection}
             onCheckedChange={toggleAutoFitSelection}
             aria-label="Fit selection"
+          />
+        </label>
+        <label className="flex cursor-pointer items-center justify-between gap-2 text-sm">
+          Enable animations
+          <Switch
+            checked={animateEdges}
+            onCheckedChange={toggleAnimateEdges}
+            aria-label="Enable animations"
           />
         </label>
         <label className="flex cursor-pointer items-center justify-between gap-2 text-sm">

@@ -8,6 +8,7 @@ beforeEach(() => {
     autoFitSelection: true,
     compactNodes: false,
     compactMode: 'all',
+    animateEdges: true,
   });
 });
 
@@ -44,5 +45,11 @@ describe('settings-store', () => {
     expect(useSettingsStore.getState().compactMode).toBe('all');
     useSettingsStore.getState().setCompactMode('shared');
     expect(useSettingsStore.getState().compactMode).toBe('shared');
+  });
+
+  it('toggles edge animations on and off', () => {
+    expect(useSettingsStore.getState().animateEdges).toBe(true);
+    useSettingsStore.getState().toggleAnimateEdges();
+    expect(useSettingsStore.getState().animateEdges).toBe(false);
   });
 });

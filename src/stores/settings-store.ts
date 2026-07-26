@@ -14,6 +14,9 @@ interface SettingsState {
   /** Which package nodes compacting applies to. */
   compactMode: 'single' | 'shared' | 'all';
   setCompactMode: (mode: 'single' | 'shared' | 'all') => void;
+  /** When on, highlighted edges play the marching-ants flow animation. */
+  animateEdges: boolean;
+  toggleAnimateEdges: () => void;
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -34,6 +37,8 @@ export const useSettingsStore = create<SettingsState>()(
       toggleCompactNodes: () => set((state) => ({ compactNodes: !state.compactNodes })),
       compactMode: 'all',
       setCompactMode: (mode) => set({ compactMode: mode }),
+      animateEdges: true,
+      toggleAnimateEdges: () => set((state) => ({ animateEdges: !state.animateEdges })),
     }),
     {
       name: 'rda-settings',
