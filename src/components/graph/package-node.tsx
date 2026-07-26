@@ -32,7 +32,7 @@ export function PackageNodeContent({
               event.stopPropagation();
               onOpenDetails();
             }}
-            className="nodrag h-auto max-w-40 truncate p-0 font-mono text-xs font-medium"
+            className="nodrag h-auto max-w-40 cursor-pointer truncate p-0 font-mono text-xs font-medium"
             title={data.packageName}
           >
             {data.packageName}

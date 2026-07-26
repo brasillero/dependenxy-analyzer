@@ -25,7 +25,7 @@ export function RepoNodeContent({
             event.stopPropagation();
             onOpenDetails();
           }}
-          className="nodrag h-auto max-w-56 truncate p-0 font-mono text-sm font-medium"
+          className="nodrag h-auto max-w-56 cursor-pointer truncate p-0 font-mono text-sm font-medium"
           title={data.label}
         >
           {data.label}
