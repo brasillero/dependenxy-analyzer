@@ -40,7 +40,7 @@ import { RepoNode } from './repo-node';
 
 const nodeTypes = { repo: RepoNode, package: PackageNode };
 
-const DIMMED_OPACITY = 0.5;
+const DIMMED_OPACITY = 0.25;
 
 /** Re-fits the viewport whenever the analysis or a forced re-layout lands. */
 function FitOnDataChange() {
