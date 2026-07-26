@@ -118,18 +118,30 @@ export function DependencyGraph() {
   // shared packages) get an onOpenDetails handler for their link-styled name.
   const baseNodes: Node[] = useMemo(
     () =>
-      [...graphData.repoNodes, ...graphData.packageNodes].map((node) => ({
-        id: node.id,
-        type: node.type,
-        position: positions.get(node.id) ?? { x: 0, y: 0 },
-        data:
-          node.type === 'repo'
-            ? { ...node.data, onOpenDetails: () => setSelectedRepo(node.data as RepoNodeData) }
-            : (node.data as PackageNodeData).isShared
-              ? { ...node.data, onOpenDetails: () => setSelectedPackage(node.data as PackageNodeData) }
-              : node.data,
-        style: highlight && !highlight.nodeIds.has(node.id) ? { opacity: DIMMED_OPACITY } : undefined,
-      })),
+      [...graphData.repoNodes, ...graphData.packageNodes].map((node) => {
+        const isHighlighted = !highlight || highlight.nodeIds.has(node.id);
+        // Unique packages linked to a selected repo pick up that repo's
+        // accent color on their border (their single version entry carries it).
+        const accentColor =
+          node.type === 'package' &&
+          !(node.data as PackageNodeData).isShared &&
+          highlight &&
+          isHighlighted
+            ? (node.data as PackageNodeData).versions[0]?.repoColor
+            : undefined;
+        return {
+          id: node.id,
+          type: node.type,
+          position: positions.get(node.id) ?? { x: 0, y: 0 },
+          data:
+            node.type === 'repo'
+              ? { ...node.data, onOpenDetails: () => setSelectedRepo(node.data as RepoNodeData) }
+              : (node.data as PackageNodeData).isShared
+                ? { ...node.data, onOpenDetails: () => setSelectedPackage(node.data as PackageNodeData) }
+                : { ...node.data, accentColor },
+          style: isHighlighted ? undefined : { opacity: DIMMED_OPACITY },
+        };
+      }),
     [graphData, positions, highlight],
   );
 

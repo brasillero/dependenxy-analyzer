@@ -41,6 +41,8 @@ export interface PackageNodeData extends Record<string, unknown> {
   isShared: boolean;
   hasVersionDrift: boolean;
   versions: PackageVersionInfo[];
+  /** Border accent applied when the owning repo node is selected (unique packages only). */
+  accentColor?: string;
 }
 
 export interface GraphRepoNode {

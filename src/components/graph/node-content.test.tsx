@@ -81,4 +81,16 @@ describe('PackageNodeContent', () => {
     expect(screen.queryByText('aligned')).not.toBeInTheDocument();
     expect(screen.queryByText(/versions/)).not.toBeInTheDocument();
   });
+
+  it('applies the accent color as border when provided', () => {
+    const accented: PackageNodeData = {
+      ...packageData,
+      isShared: false,
+      hasVersionDrift: false,
+      versions: [packageData.versions[0]],
+      accentColor: '#2563eb',
+    };
+    const { container } = render(<PackageNodeContent data={accented} />);
+    expect(container.firstChild).toHaveStyle({ borderColor: '#2563eb' });
+  });
 });

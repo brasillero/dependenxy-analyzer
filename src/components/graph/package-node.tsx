@@ -23,6 +23,7 @@ export function PackageNodeContent({
         data.hasVersionDrift && 'border-orange-500/60 bg-orange-50 ring-1 ring-orange-500/30 dark:bg-orange-950',
         data.isShared && !data.hasVersionDrift && 'border-green-500/60 bg-green-50 ring-1 ring-green-500/30 dark:bg-green-950',
       )}
+      style={data.accentColor ? { borderColor: data.accentColor } : undefined}
       title={onOpenDetails ? `${data.packageName} — click for version details` : data.packageName}
     >
       <div className="flex items-center gap-2">
