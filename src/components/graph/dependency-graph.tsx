@@ -8,6 +8,7 @@ import {
   Panel,
   ReactFlow,
   useNodesState,
+  useReactFlow,
   type Edge,
   type Node,
   type NodeChange,
@@ -40,6 +41,19 @@ import { RepoNode } from './repo-node';
 const nodeTypes = { repo: RepoNode, package: PackageNode };
 
 const DIMMED_OPACITY = 0.5;
+
+/** Re-fits the viewport whenever the analysis or a forced re-layout lands. */
+function FitOnDataChange() {
+  const { fitView } = useReactFlow();
+  const analysis = useViewStore((s) => s.analysis);
+  const layoutVersion = useViewStore((s) => s.layoutVersion);
+  useEffect(() => {
+    if (!analysis) return;
+    const timer = setTimeout(() => fitView({ padding: 0.2, duration: 300 }), 50);
+    return () => clearTimeout(timer);
+  }, [analysis, layoutVersion, fitView]);
+  return null;
+}
 
 /** Drop version entries whose dep types are all disabled by the header toggles. */
 function filterGroupsByDepTypes(
@@ -232,6 +246,7 @@ export function DependencyGraph() {
       >
         <Background />
         <Controls />
+        <FitOnDataChange />
         <Panel position="top-right">
           <div className="flex w-64 flex-col gap-2">
             <RefreshButton />
