@@ -20,8 +20,8 @@ export function PackageNodeContent({
     <div
       className={cn(
         'rounded-full border bg-card px-3 py-1.5 shadow-sm',
-        data.hasVersionDrift && 'border-red-500/60 bg-red-500/5 ring-1 ring-red-500/30',
-        data.isShared && !data.hasVersionDrift && 'border-amber-500/60 bg-amber-500/5 ring-1 ring-amber-500/30',
+        data.hasVersionDrift && 'border-red-500/60 bg-red-50 ring-1 ring-red-500/30 dark:bg-red-950',
+        data.isShared && !data.hasVersionDrift && 'border-amber-500/60 bg-amber-50 ring-1 ring-amber-500/30 dark:bg-amber-950',
       )}
       title={onOpenDetails ? `${data.packageName} — click for version details` : data.packageName}
     >
