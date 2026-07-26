@@ -20,8 +20,8 @@ export function PackageNodeContent({
     <div
       className={cn(
         'rounded-full border bg-card px-3 py-1.5 shadow-sm',
-        data.hasVersionDrift && 'border-red-500/60 bg-red-50 ring-1 ring-red-500/30 dark:bg-red-950',
-        data.isShared && !data.hasVersionDrift && 'border-amber-500/60 bg-amber-50 ring-1 ring-amber-500/30 dark:bg-amber-950',
+        data.hasVersionDrift && 'border-orange-500/60 bg-orange-50 ring-1 ring-orange-500/30 dark:bg-orange-950',
+        data.isShared && !data.hasVersionDrift && 'border-green-500/60 bg-green-50 ring-1 ring-green-500/30 dark:bg-green-950',
       )}
       title={onOpenDetails ? `${data.packageName} — click for version details` : data.packageName}
     >
@@ -49,14 +49,14 @@ export function PackageNodeContent({
         {data.hasVersionDrift ? (
           <Badge
             variant="outline"
-            className="border-red-500/50 bg-red-500/10 font-mono text-red-700 dark:text-red-400"
+            className="border-orange-500/50 bg-orange-500/10 font-mono text-orange-700 dark:text-orange-400"
           >
             {distinctVersions.length} versions
           </Badge>
         ) : data.isShared ? (
           <Badge
             variant="outline"
-            className="border-amber-500/50 bg-amber-500/10 font-mono text-amber-700 dark:text-amber-400"
+            className="border-green-500/50 bg-green-500/10 font-mono text-green-700 dark:text-green-400"
           >
             aligned
           </Badge>

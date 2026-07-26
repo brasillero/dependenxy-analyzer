@@ -44,19 +44,19 @@ describe('RepoNodeContent', () => {
 });
 
 describe('PackageNodeContent', () => {
-  it('shows a red versions-count badge when drifted, without per-repo badges', () => {
+  it('shows an orange versions-count badge when drifted, without per-repo badges', () => {
     render(<PackageNodeContent data={packageData} />);
     expect(screen.getByText('react')).toBeInTheDocument();
     const badge = screen.getByText('2 versions');
     expect(badge).toBeInTheDocument();
-    expect(badge.className).toContain('red');
+    expect(badge.className).toContain('orange');
     // no per-repo version badges on the canvas node:
     expect(screen.queryByText('^18.2.0')).not.toBeInTheDocument();
     expect(screen.queryByText('^17.0.2')).not.toBeInTheDocument();
     expect(screen.queryByText(/drift/i)).not.toBeInTheDocument();
   });
 
-  it('shows an amber "aligned" badge when shared and converged', () => {
+  it('shows a green "aligned" badge when shared and converged', () => {
     const converged: PackageNodeData = {
       ...packageData,
       hasVersionDrift: false,
@@ -65,7 +65,7 @@ describe('PackageNodeContent', () => {
     render(<PackageNodeContent data={converged} />);
     const badge = screen.getByText('aligned');
     expect(badge).toBeInTheDocument();
-    expect(badge.className).toContain('amber');
+    expect(badge.className).toContain('green');
     expect(screen.queryByText('^18.2.0')).not.toBeInTheDocument();
   });
 

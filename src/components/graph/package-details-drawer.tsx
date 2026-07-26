@@ -29,7 +29,7 @@ const STATUS_LABELS = {
   majority: { label: 'most common', className: '' },
   divergent: {
     label: 'divergent',
-    className: 'border-red-500/50 bg-red-500/10 text-red-700 dark:text-red-400',
+    className: 'border-orange-500/50 bg-orange-500/10 text-orange-700 dark:text-orange-400',
   },
 } as const;
 
