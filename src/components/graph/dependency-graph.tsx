@@ -233,15 +233,15 @@ export function DependencyGraph() {
         <Background />
         <Controls />
         <Panel position="top-right">
-          <SidePanel
-            selectedNodeId={listSelectedNodeId}
-            onSelect={handlePanelSelect}
-            sharedOnly={sharedOnly}
-            onSharedOnlyChange={setSharedOnly}
-          />
-        </Panel>
-        <Panel position="bottom-center">
-          <RefreshButton />
+          <div className="flex w-64 flex-col gap-2">
+            <RefreshButton />
+            <SidePanel
+              selectedNodeId={listSelectedNodeId}
+              onSelect={handlePanelSelect}
+              sharedOnly={sharedOnly}
+              onSharedOnlyChange={setSharedOnly}
+            />
+          </div>
         </Panel>
         <AnalysisBanner />
       </ReactFlow>

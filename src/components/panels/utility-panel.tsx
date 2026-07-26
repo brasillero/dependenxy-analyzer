@@ -32,6 +32,7 @@ export function RefreshButton() {
         <TooltipTrigger asChild>
           <Button
             size="sm"
+            className="w-full"
             onClick={() => executeAnalysis(repos, queryClient)}
             disabled={disabled}
             aria-label="Refresh analysis"
