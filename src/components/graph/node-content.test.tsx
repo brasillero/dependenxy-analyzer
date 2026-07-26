@@ -37,7 +37,8 @@ describe('RepoNodeContent', () => {
     const { container } = render(
       <RepoNodeContent data={{ repoId: 'r1', label: 'acme/a', branch: 'main', color: '#2563eb' }} />,
     );
-    expect(screen.getByText('acme/a')).toBeInTheDocument();
+    expect(screen.getByText('a')).toBeInTheDocument();
+    expect(screen.queryByText('acme/a')).not.toBeInTheDocument();
     expect(screen.getByText(/main/)).toBeInTheDocument();
     expect(container.firstChild).toHaveStyle({ borderColor: '#2563eb' });
   });

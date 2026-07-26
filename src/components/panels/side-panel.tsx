@@ -11,7 +11,7 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { AddRepoForm } from '@/components/add-repo-form';
 import { TokenDialog } from '@/components/token-dialog';
 import { PlusIcon, XIcon } from '@/components/icons';
-import { cn } from '@/lib/utils';
+import { cn, shortName } from '@/lib/utils';
 import { DEP_TYPES, type DepType } from '@/lib/types';
 import { useRepoStore } from '@/stores/repo-store';
 import { useSettingsStore } from '@/stores/settings-store';
@@ -22,11 +22,6 @@ interface Props {
   onSelect: (nodeId: string | null) => void;
   sharedOnly: boolean;
   onSharedOnlyChange: (value: boolean) => void;
-}
-
-/** Last path segment for compact display ('group/sub/project' -> 'project'). */
-function shortName(displayName: string): string {
-  return displayName.split('/').filter(Boolean).pop() ?? displayName;
 }
 
 const DEP_TYPE_LABELS: Record<DepType, string> = {

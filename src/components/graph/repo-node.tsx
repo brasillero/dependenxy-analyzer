@@ -1,5 +1,6 @@
 import { Handle, Position, type Node, type NodeProps } from '@xyflow/react';
 import { Button } from '@/components/ui/button';
+import { shortName } from '@/lib/utils';
 import type { RepoNodeData } from '@/lib/graph/graph-data';
 
 type RepoFlowNode = Node<RepoNodeData, 'repo'>;
@@ -12,6 +13,7 @@ export function RepoNodeContent({
   data: RepoNodeData;
   onOpenDetails?: () => void;
 }) {
+  const name = shortName(data.label);
   return (
     <div
       className="rounded-md border-2 bg-card px-4 py-2 shadow-sm"
@@ -25,14 +27,14 @@ export function RepoNodeContent({
             event.stopPropagation();
             onOpenDetails();
           }}
-          className="nodrag h-auto max-w-56 cursor-pointer truncate p-0 font-mono text-sm font-medium"
+          className="nodrag h-auto max-w-40 cursor-pointer truncate p-0 font-mono text-sm font-medium"
           title={data.label}
         >
-          {data.label}
+          {name}
         </Button>
       ) : (
-        <p className="max-w-56 truncate font-mono text-sm font-medium" title={data.label}>
-          {data.label}
+        <p className="max-w-40 truncate font-mono text-sm font-medium" title={data.label}>
+          {name}
         </p>
       )}
       <p className="text-xs text-muted-foreground">on {data.branch}</p>
