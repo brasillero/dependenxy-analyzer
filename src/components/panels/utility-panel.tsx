@@ -33,7 +33,7 @@ export function RefreshButton() {
           <Button
             size="sm"
             className="w-full"
-            onClick={() => executeAnalysis(repos, queryClient)}
+            onClick={() => executeAnalysis(repos, queryClient, { refetch: true, fit: false })}
             disabled={disabled}
             aria-label="Refresh analysis"
           >

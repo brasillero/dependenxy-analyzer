@@ -100,16 +100,17 @@ function LayoutAnimator({
   return null;
 }
 
-/** Re-fits the viewport whenever the analysis or a forced re-layout lands. */
+/** Re-fits the viewport when an automatic analysis lands (never on manual refresh). */
 function FitOnDataChange() {
   const { fitView } = useReactFlow();
-  const analysis = useViewStore((s) => s.analysis);
-  const layoutVersion = useViewStore((s) => s.layoutVersion);
+  const fitVersion = useViewStore((s) => s.fitVersion);
+  const prevFitVersionRef = useRef(fitVersion);
   useEffect(() => {
-    if (!analysis) return;
+    if (prevFitVersionRef.current === fitVersion) return;
+    prevFitVersionRef.current = fitVersion;
     const timer = setTimeout(() => fitView({ padding: 0.2, duration: 300 }), 50);
     return () => clearTimeout(timer);
-  }, [analysis, layoutVersion, fitView]);
+  }, [fitVersion, fitView]);
   return null;
 }
 
