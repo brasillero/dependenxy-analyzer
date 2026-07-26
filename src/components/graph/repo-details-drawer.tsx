@@ -71,7 +71,7 @@ export function RepoDetailsDrawer({ graphData, repo, onClose }: Props) {
                       {row.hasVersionDrift ? (
                         <Badge
                           variant="outline"
-                          className="border-amber-500/50 bg-amber-500/10 text-amber-700 dark:text-amber-400"
+                          className="border-red-500/50 bg-red-500/10 text-red-700 dark:text-red-400"
                         >
                           drift
                         </Badge>
