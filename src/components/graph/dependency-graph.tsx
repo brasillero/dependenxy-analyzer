@@ -33,12 +33,14 @@ import { SidePanel } from '@/components/panels/side-panel';
 import { OnboardingCard } from '@/components/onboarding-card';
 import { RefreshButton } from '@/components/panels/utility-panel';
 import { AnalysisBanner } from '@/components/analysis-banner';
+import { DependencyEdge } from './dependency-edge';
 import { PackageDetailsDrawer } from './package-details-drawer';
 import { PackageNode } from './package-node';
 import { RepoDetailsDrawer } from './repo-details-drawer';
 import { RepoNode } from './repo-node';
 
 const nodeTypes = { repo: RepoNode, package: PackageNode };
+const edgeTypes = { dependency: DependencyEdge };
 
 const DIMMED_OPACITY = 0.25;
 
@@ -241,17 +243,21 @@ export function DependencyGraph() {
 
   const edges: Edge[] = useMemo(
     () =>
-      graphData.edges.map((edge) => ({
-        id: edge.id,
-        source: edge.source,
-        target: edge.target,
-        type: 'straight',
-        style: {
-          stroke: edge.stroke,
-          strokeWidth: highlight && highlight.edgeIds.has(edge.id) ? 2.5 : 1.5,
-          opacity: highlight && !highlight.edgeIds.has(edge.id) ? DIMMED_OPACITY : 1,
-        },
-      })),
+      graphData.edges.map((edge) => {
+        const isHighlighted = highlight !== null && highlight.edgeIds.has(edge.id);
+        return {
+          id: edge.id,
+          source: edge.source,
+          target: edge.target,
+          type: 'dependency',
+          animated: isHighlighted,
+          style: {
+            stroke: edge.stroke,
+            strokeWidth: isHighlighted ? 2.5 : 1.5,
+            opacity: highlight && !isHighlighted ? DIMMED_OPACITY : 1,
+          },
+        };
+      }),
     [graphData, highlight],
   );
 
@@ -291,6 +297,7 @@ export function DependencyGraph() {
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         fitView
         minZoom={0.05}
         onNodesChange={onNodesChange}

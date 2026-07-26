@@ -124,3 +124,19 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Marching-ants flow on highlighted dependency edges. The edge path is drawn
+   package -> repo (see dependency-edge.tsx), so dashes travel toward the repo. */
+@keyframes dependency-edge-flow {
+  from {
+    stroke-dashoffset: 12;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.react-flow__edge-path.animated-dependency-edge {
+  stroke-dasharray: 6;
+  animation: dependency-edge-flow 0.5s linear infinite;
+}
