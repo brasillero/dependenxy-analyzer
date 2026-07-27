@@ -55,6 +55,16 @@ describe('TokenDialog', () => {
     expect(useTokenStore.getState().gitlabTokens['gitlab.com']).toBe('glpat_secret');
   });
 
+  it('lets the user register a custom host and set its token', async () => {
+    const user = await openDialog();
+    await user.type(screen.getByLabelText(/add self-hosted gitlab/i), 'https://gitlab.weg.net/');
+    await user.click(screen.getByRole('button', { name: /add host/i }));
+    const field = screen.getByLabelText(/gitlab\.weg\.net/i);
+    expect(field).toBeInTheDocument();
+    await user.type(field, 'glpat_weg');
+    expect(useTokenStore.getState().gitlabTokens['gitlab.weg.net']).toBe('glpat_weg');
+  });
+
   it('clear all empties every token', async () => {
     useTokenStore.getState().setGithubToken('x');
     useTokenStore.getState().setGitlabToken('gitlab.com', 'y');

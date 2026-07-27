@@ -34,14 +34,27 @@ export function TokenDialog({
 
   const hasCredentials = githubToken !== '' || Object.keys(gitlabTokens).length > 0;
 
-  // gitlab.com is always present; self-hosted hosts appear as repos are added.
+  // gitlab.com is always present; self-hosted hosts appear as repos are added,
+  // plus any host the user registers manually below (needed because adding a
+  // repo requires its host's token first — chicken-and-egg otherwise).
+  const [extraHosts, setExtraHosts] = useState<string[]>([]);
+  const [newHost, setNewHost] = useState('');
   const gitlabHosts = useMemo(() => {
     const hosts = new Set<string>([DEFAULT_GITLAB_HOST]);
     for (const repo of repos) {
       if (repo.provider === 'gitlab') hosts.add(repo.host);
     }
+    for (const host of extraHosts) hosts.add(host);
     return [...hosts];
-  }, [repos]);
+  }, [repos, extraHosts]);
+
+  const handleAddHost = () => {
+    // Normalize: strip protocol, trailing slashes/path — we key by bare host.
+    const host = newHost.trim().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+    if (!host) return;
+    setExtraHosts((prev) => (prev.includes(host) ? prev : [...prev, host]));
+    setNewHost('');
+  };
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -103,6 +116,28 @@ export function TokenDialog({
               />
             </div>
           ))}
+          <div className="space-y-1.5">
+            <label htmlFor="token-gitlab-new-host" className="text-sm font-medium">
+              Add self-hosted GitLab
+            </label>
+            <div className="flex gap-2">
+              <Input
+                id="token-gitlab-new-host"
+                placeholder="gitlab.acme.com"
+                value={newHost}
+                onChange={(e) => setNewHost(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddHost();
+                  }
+                }}
+              />
+              <Button type="button" variant="secondary" onClick={handleAddHost} disabled={!newHost.trim()}>
+                Add host
+              </Button>
+            </div>
+          </div>
           <Button variant="destructive" onClick={clearAll}>
             Clear all
           </Button>
