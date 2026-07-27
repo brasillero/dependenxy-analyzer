@@ -148,6 +148,34 @@ describe('repoDependencies', () => {
     expect(legacy.version).toBe('^17.0.2');
   });
 
+  it('keeps multi-dep-type declarations of one package distinguishable (unique row keys)', () => {
+    // Same package, same package.json, declared under two dep types with
+    // different ranges (react in dependencies + peerDependencies) — the case
+    // that produced duplicate React keys in the repo drawer.
+    const multiGroups: DependencyGroup[] = [
+      {
+        depName: 'react',
+        versions: [
+          {
+            versionRange: '^18.2.0',
+            depTypes: ['dependencies'],
+            projects: [project('r1', 'acme/a', 'packages/lib/package.json')],
+          },
+          {
+            versionRange: '^18.0.0',
+            depTypes: ['peerDependencies'],
+            projects: [project('r1', 'acme/a', 'packages/lib/package.json')],
+          },
+        ],
+      },
+    ];
+    const rows = repoDependencies(buildGraphData(multiGroups, repos), 'r1');
+    expect(rows).toHaveLength(2);
+    const keys = rows.map((r) => `${r.packageName}:${r.packagePath}:${r.version}`);
+    expect(new Set(keys).size).toBe(2);
+    expect(rows.map((r) => r.depTypes)).toEqual([['dependencies'], ['peerDependencies']]);
+  });
+
   it('returns an empty list for an unknown repo id', () => {
     expect(repoDependencies(buildGraphData(groups, repos), 'ghost')).toEqual([]);
   });

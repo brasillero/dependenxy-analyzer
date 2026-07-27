@@ -32,6 +32,8 @@ export interface PackageVersionInfo {
   repoColor: string;
   branch: string;
   version: string;
+  /** Dep types this declaration appears under (dependencies, devDependencies, …). */
+  depTypes: string[];
   /** 'aligned' when no drift; otherwise the version group with most projects is 'majority'. */
   status: 'aligned' | 'majority' | 'divergent';
 }
@@ -124,6 +126,7 @@ export function buildGraphData(groups: DependencyGroup[], repos: RepoConfig[]): 
           repoColor: color,
           branch: branchByRepoId.get(project.repoId) ?? '',
           version: version.versionRange,
+          depTypes: version.depTypes,
           status: hasVersionDrift ? (versionIndex === 0 ? 'majority' : 'divergent') : 'aligned',
         });
         const edgeKey = `${project.repoId}->${group.depName}`;
@@ -173,10 +176,17 @@ export interface RepoDependencyRow {
   packageName: string;
   packagePath: string;
   version: string;
+  depTypes: string[];
   hasVersionDrift: boolean;
 }
 
-/** All dependency declarations of one repo, sorted by package name then path. */
+/**
+ * All dependency declarations of one repo, sorted by package name then path.
+ * One row per (package, path, version-range) declaration: the same package can
+ * legitimately appear twice in one package.json under different dep types with
+ * different ranges (e.g. react in dependencies + peerDependencies), so rows
+ * carry their depTypes to stay distinguishable.
+ */
 export function repoDependencies(data: GraphData, repoId: string): RepoDependencyRow[] {
   const rows: RepoDependencyRow[] = [];
   for (const node of data.packageNodes) {
@@ -186,6 +196,7 @@ export function repoDependencies(data: GraphData, repoId: string): RepoDependenc
           packageName: node.data.packageName,
           packagePath: version.packagePath,
           version: version.version,
+          depTypes: version.depTypes,
           hasVersionDrift: node.data.hasVersionDrift,
         });
       }

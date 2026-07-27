@@ -57,7 +57,7 @@ export function RepoDetailsDrawer({ graphData, repo, onClose }: Props) {
               </TableHeader>
               <TableBody>
                 {rows.map((row) => (
-                  <TableRow key={`${row.packageName}:${row.packagePath}`}>
+                  <TableRow key={`${row.packageName}:${row.packagePath}:${row.version}`}>
                     <TableCell className="font-mono text-xs">
                       {row.packageName}
                       {row.packagePath !== 'package.json' && (
@@ -66,7 +66,16 @@ export function RepoDetailsDrawer({ graphData, repo, onClose }: Props) {
                         </span>
                       )}
                     </TableCell>
-                    <TableCell className="font-mono text-xs">{row.version}</TableCell>
+                    <TableCell className="font-mono text-xs">
+                      {row.version}
+                      <span className="mt-0.5 flex flex-wrap gap-0.5">
+                        {row.depTypes.map((type) => (
+                          <Badge key={type} variant="secondary" className="px-1 text-[9px] font-normal">
+                            {type}
+                          </Badge>
+                        ))}
+                      </span>
+                    </TableCell>
                     <TableCell>
                       {row.hasVersionDrift ? (
                         <Badge

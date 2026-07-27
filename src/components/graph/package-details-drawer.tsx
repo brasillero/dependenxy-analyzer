@@ -58,7 +58,7 @@ export function PackageDetailsDrawer({ packageData, onClose }: Props) {
               </TableHeader>
               <TableBody>
                 {packageData.versions.map((version) => (
-                  <TableRow key={`${version.repoId}:${version.packagePath}`}>
+                  <TableRow key={`${version.repoId}:${version.packagePath}:${version.version}`}>
                     <TableCell className="font-mono text-xs" title={version.repoName}>
                       {shortName(version.repoName)} / {version.packageName}
                     </TableCell>

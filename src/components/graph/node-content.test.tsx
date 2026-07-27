@@ -17,6 +17,7 @@ const packageData: PackageNodeData = {
       repoColor: '#2563eb',
       branch: 'main',
       version: '^18.2.0',
+      depTypes: ['dependencies'],
       status: 'majority',
     },
     {
@@ -27,6 +28,7 @@ const packageData: PackageNodeData = {
       repoColor: '#d97706',
       branch: 'develop',
       version: '^17.0.2',
+      depTypes: ['dependencies'],
       status: 'divergent',
     },
   ],
