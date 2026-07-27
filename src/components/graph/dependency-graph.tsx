@@ -44,6 +44,9 @@ const nodeTypes = { repo: RepoNode, package: PackageNode };
 const edgeTypes = { dependency: DependencyEdge };
 
 const DIMMED_OPACITY = 0.25;
+// Edges render pale by default so dense graphs stay readable; a selection
+// brings its connected edges back to full strength (dimmed ones fade lower).
+const EDGE_OPACITY = 0.55;
 const LAYOUT_ANIMATION_MS = 300;
 
 /**
@@ -328,7 +331,7 @@ export function DependencyGraph() {
           style: {
             stroke: edge.stroke,
             strokeWidth: isHighlighted ? 2.5 : 1.5,
-            opacity: highlight && !isHighlighted ? DIMMED_OPACITY : 1,
+            opacity: highlight ? (isHighlighted ? 1 : DIMMED_OPACITY) : EDGE_OPACITY,
           },
         };
       }),
