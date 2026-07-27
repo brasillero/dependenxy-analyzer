@@ -374,6 +374,10 @@ export function DependencyGraph() {
         edgeTypes={edgeTypes}
         fitView
         minZoom={0.05}
+        // Selection is click-only: with the default (true), pointer-down on a
+        // node selects it before drag intent is known, so every drag lit up
+        // the highlight state. false keeps dragging selection-free.
+        selectNodesOnDrag={false}
         onNodesChange={onNodesChange}
         onNodeDoubleClick={handleNodeDoubleClick}
         onNodeDragStart={handleDragStart}
