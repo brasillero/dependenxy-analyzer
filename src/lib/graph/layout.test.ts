@@ -65,8 +65,9 @@ describe('computeLayout', () => {
     const positions = computeLayout(typedNodes, typedLinks, WIDTH, HEIGHT);
     const a = positions.get('pkg_1')!;
     const b = positions.get('pkg_2')!;
-    // Observed: exactly 240px (120 + 120 radii fully satisfied); 200 leaves margin.
-    expect(Math.hypot(a.x - b.x, a.y - b.y)).toBeGreaterThanOrEqual(200);
+    // Collide radii are 100 + 100 = 200 fully satisfied; 190 leaves margin
+    // for float precision in the simulation's final positions.
+    expect(Math.hypot(a.x - b.x, a.y - b.y)).toBeGreaterThanOrEqual(190);
   });
 
   it('keeps repos separated when only shared packages remain ("Only shared" mode)', () => {

@@ -48,16 +48,16 @@ export function computeLayout(
     // apart); packages repel gently so they keep orbiting their repo.
     .force(
       'charge',
-      forceManyBody<SimNode>().strength((node) => (node.type === 'repo' ? -3000 : -300)),
+      forceManyBody<SimNode>().strength((node) => (node.type === 'repo' ? -1500 : -300)),
     )
     .force('center', forceCenter(width / 2, height / 2))
     .force(
       'link',
       forceLink<SimNode, { source: string; target: string }>(simLinks)
         .id((node) => node.id)
-        .distance(160),
+        .distance(120),
     )
-    .force('collide', forceCollide<SimNode>((node) => (node.type === 'repo' ? 200 : 120)))
+    .force('collide', forceCollide<SimNode>((node) => (node.type === 'repo' ? 120 : 100)))
     .stop();
 
   for (let i = 0; i < SIMULATION_TICKS; i += 1) {
