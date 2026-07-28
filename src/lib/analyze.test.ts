@@ -93,11 +93,20 @@ describe('runAnalysis', () => {
     expect(groups.some((g) => g.depName === 'x')).toBe(true);
   });
 
-  it('reuses warm cache: second run does not refetch', async () => {
+  it('reuses warm cache: second run does not refetch (staleTime: Infinity)', async () => {
     const queryClient = freshQueryClient();
     fetchMock.mockResolvedValue(files({ x: '^1.0.0' }));
     await runAnalysis([repo('a')], queryClient);
     await runAnalysis([repo('a')], queryClient);
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('refetches after explicit invalidation (the manual refresh path)', async () => {
+    const queryClient = freshQueryClient();
+    fetchMock.mockResolvedValue(files({ x: '^1.0.0' }));
+    await runAnalysis([repo('a')], queryClient);
+    await queryClient.invalidateQueries({ queryKey: ['repositories'] });
+    await runAnalysis([repo('a')], queryClient);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });

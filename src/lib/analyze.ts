@@ -16,13 +16,18 @@ export interface AnalysisResult {
   failed: AnalysisFailure[];
 }
 
-const ANALYSIS_STALE_TIME = 5 * 60 * 1000;
+/**
+ * Cache never goes stale on its own: a fetch happens only when the query is
+ * missing or was explicitly invalidated (see executeAnalysis' refresh path).
+ */
+const ANALYSIS_STALE_TIME = Infinity;
 
 /**
  * Cross-repo analysis (RF-08). Each repo is read at its effective branch via
- * ensureQueryData — warm cache entries are reused untouched (§3.6). Failures
- * (missing token, 401/404/rate limit, network) are collected per repo and
- * never abort the run.
+ * fetchQuery — with staleTime: Infinity warm cache entries are returned
+ * untouched; only an explicit invalidateQueries (manual refresh) makes
+ * fetchQuery hit the network. Failures (missing token, 401/404/rate limit,
+ * network) are collected per repo and never abort the run.
  */
 export async function runAnalysis(
   repos: RepoConfig[],
@@ -45,7 +50,7 @@ export async function runAnalysis(
       continue;
     }
     try {
-      const result = await queryClient.ensureQueryData<PackageFilesResult>({
+      const result = await queryClient.fetchQuery<PackageFilesResult>({
         queryKey: ['repositories', repo.id, branch],
         queryFn: () => fetchPackageJsonFiles(repo, branch),
         staleTime: ANALYSIS_STALE_TIME,
