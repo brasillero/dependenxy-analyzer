@@ -44,9 +44,10 @@ const nodeTypes = { repo: RepoNode, package: PackageNode };
 const edgeTypes = { dependency: DependencyEdge };
 
 const DIMMED_OPACITY = 0.25;
-// Edges render pale by default so dense graphs stay readable; a selection
-// brings its connected edges back to full strength (dimmed ones fade lower).
-const EDGE_OPACITY = 0.55;
+// Edges are drawn with the repo accent mixed toward the card surface (opaque
+// color-mix, theme-adaptive) so dense graphs stay readable; a selection
+// restores the full accent on its connected edges.
+const EDGE_MIX = '35%';
 const LAYOUT_ANIMATION_MS = 300;
 
 /**
@@ -329,9 +330,11 @@ export function DependencyGraph() {
           animated: isHighlighted && animateEdges,
           data: { edgeType },
           style: {
-            stroke: edge.stroke,
+            stroke: isHighlighted
+              ? edge.stroke
+              : `color-mix(in oklch, ${edge.stroke} ${EDGE_MIX}, var(--card))`,
             strokeWidth: isHighlighted ? 2.5 : 1.5,
-            opacity: highlight ? (isHighlighted ? 1 : DIMMED_OPACITY) : EDGE_OPACITY,
+            opacity: highlight && !isHighlighted ? DIMMED_OPACITY : 1,
           },
         };
       }),
