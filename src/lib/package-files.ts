@@ -1,6 +1,7 @@
 import type { PackageJsonFile, RepoConfig } from './types';
 import { createProxyClient, getJsonWithHeaders } from './proxy-client';
 import { getProvider, listPackageJsonPaths } from './providers';
+import { fetchPackageJsonsBatched } from './providers/gitlab';
 
 export interface PackageFilesResult {
   files: PackageJsonFile[];
@@ -69,6 +70,15 @@ export async function fetchPackageJsonFiles(
   const pagedGet = <T,>(path: string, searchParams?: Record<string, string>) =>
     getJsonWithHeaders<T>(repo, path, searchParams);
   const paths = await listPackageJsonPaths(repo, branch, client, pagedGet);
+  if (repo.provider === 'gitlab') {
+    try {
+      // One GraphQL request per 50 files instead of one REST call per file.
+      return await fetchPackageJsonsBatched(repo, branch, paths);
+    } catch {
+      // Older self-hosted GitLab may lack the blobs(paths:) field — fall back
+      // to the per-file REST flow below.
+    }
+  }
   return collectFiles(paths, (path) =>
     getProvider(repo).fetchPackageJson(client, repo, branch, path),
   );

@@ -89,6 +89,18 @@ export function createProxyClient(repo: RepoConfig): ProxyClient {
   };
 }
 
+/** POST JSON through the app proxy and parse the JSON response. */
+export async function postGraphql<T>(
+  repo: RepoConfig,
+  payload: { query: string; variables?: Record<string, unknown> },
+): Promise<T> {
+  const base = kyInstance.extend({
+    prefix: '/api/proxy/gitlab',
+    headers: { 'x-gitlab-host': `https://${repo.host}` },
+  });
+  return toStatusError(base.post('graphql', { json: payload }).json<T>());
+}
+
 export type { PagedResponse, PagedGet } from '@/lib/providers/provider';
 
 /** GET JSON and expose upstream response headers (needed for Link / x-next-page pagination). */

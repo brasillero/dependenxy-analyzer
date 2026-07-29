@@ -76,3 +76,57 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
   return new NextResponse(upstream.body, { status: upstream.status, headers: responseHeaders });
 }
+
+/**
+ * GraphQL is POST-only and lives OUTSIDE /api/v4 (/api/graphql), so it gets a
+ * dedicated handler that accepts exactly the 'graphql' path segment. Same
+ * SSRF validation and no-redirect rule as the GET proxy.
+ */
+export async function POST(req: NextRequest): Promise<NextResponse> {
+  const rawHost = req.headers.get('x-gitlab-host') ?? DEFAULT_HOST;
+  const validation = validateGitLabHost(rawHost);
+  if (!validation.ok) {
+    return NextResponse.json(
+      { error: `Rejected GitLab host: ${validation.reason}` },
+      { status: 400 },
+    );
+  }
+
+  const requestUrl = new URL(req.url);
+  const rawPath = requestUrl.pathname.startsWith(ROUTE_PREFIX)
+    ? requestUrl.pathname.slice(ROUTE_PREFIX.length)
+    : requestUrl.pathname;
+  if (rawPath !== 'graphql') {
+    return NextResponse.json({ error: 'POST is only supported for the graphql endpoint.' }, { status: 404 });
+  }
+
+  const headers: Record<string, string> = { 'content-type': 'application/json' };
+  const token = req.headers.get('x-access-token');
+  if (token) {
+    headers['PRIVATE-TOKEN'] = token;
+  }
+
+  let upstream: Response;
+  try {
+    upstream = await fetch(`${validation.url.origin}/api/graphql`, {
+      method: 'POST',
+      headers,
+      body: await req.text(),
+      cache: 'no-store',
+      redirect: 'manual',
+      signal: AbortSignal.timeout(30_000),
+    });
+  } catch {
+    return NextResponse.json(
+      { message: 'Upstream request failed — host unreachable or network error.' },
+      { status: 502, headers: { 'cache-control': 'no-store' } },
+    );
+  }
+
+  const responseHeaders = new Headers();
+  const contentType = upstream.headers.get('content-type');
+  if (contentType) responseHeaders.set('content-type', contentType);
+  responseHeaders.set('cache-control', 'no-store');
+
+  return new NextResponse(upstream.body, { status: upstream.status, headers: responseHeaders });
+}

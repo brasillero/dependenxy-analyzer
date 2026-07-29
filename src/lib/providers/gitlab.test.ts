@@ -1,7 +1,15 @@
-import { describe, it, expect, vi } from 'vitest';
-import { gitlabProvider, listPackageJsonPathsPaginated } from './gitlab';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { gitlabProvider, listPackageJsonPathsPaginated, fetchPackageJsonsBatched } from './gitlab';
 import type { PagedGet, ProxyClient } from './provider';
 import type { RepoConfig } from '@/lib/types';
+
+vi.mock('@/lib/proxy-client', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/proxy-client')>()),
+  postGraphql: vi.fn(),
+}));
+
+import { postGraphql } from '@/lib/proxy-client';
+const graphqlMock = vi.mocked(postGraphql);
 
 const repo: RepoConfig = {
   id: 'r2',
@@ -173,5 +181,93 @@ describe('listBranches', () => {
     const names = await gitlabProvider.listBranches(pagedGet, repo);
     expect(names).toHaveLength(500);
     expect(pagedGet).toHaveBeenCalledTimes(5);
+  });
+});
+
+describe('fetchPackageJsonsBatched', () => {
+  const pkgJson = (name: string) => JSON.stringify({ name, dependencies: { react: '^18.0.0' } });
+
+  beforeEach(() => {
+    graphqlMock.mockReset();
+  });
+
+  it('fetches all paths in a single GraphQL request when under the chunk size', async () => {
+    graphqlMock.mockResolvedValueOnce({
+      data: {
+        project: {
+          repository: {
+            blobs: {
+              nodes: [
+                { path: 'package.json', rawTextBlob: pkgJson('root') },
+                { path: 'packages/a/package.json', rawTextBlob: pkgJson('a') },
+              ],
+            },
+          },
+        },
+      },
+    });
+    const result = await fetchPackageJsonsBatched(repo, 'develop', [
+      'package.json',
+      'packages/a/package.json',
+    ]);
+    expect(graphqlMock).toHaveBeenCalledTimes(1);
+    const variables = graphqlMock.mock.calls[0][1].variables as { fullPath: string; ref: string; paths: string[] };
+    expect(variables.fullPath).toBe('group/sub/project');
+    expect(variables.ref).toBe('develop');
+    expect(result.failedCount).toBe(0);
+    expect(result.files.map((f) => f.packageName)).toEqual(['root', 'a']);
+  });
+
+  it('chunks paths into groups of 50', async () => {
+    const paths = Array.from({ length: 120 }, (_, i) => `packages/p${i}/package.json`);
+    graphqlMock.mockImplementation(async (_repo, payload) => {
+      const { paths: chunk } = payload.variables as { paths: string[] };
+      return {
+        data: {
+          project: {
+            repository: {
+              blobs: {
+                nodes: chunk.map((path) => ({ path, rawTextBlob: pkgJson(path) })),
+              },
+            },
+          },
+        },
+      };
+    });
+    const result = await fetchPackageJsonsBatched(repo, 'main', paths);
+    expect(graphqlMock).toHaveBeenCalledTimes(3); // 50 + 50 + 20
+    expect(result.files).toHaveLength(120);
+    expect(result.failedCount).toBe(0);
+  });
+
+  it('counts missing blobs and unparsable files as failures, keeps the rest', async () => {
+    graphqlMock.mockResolvedValueOnce({
+      data: {
+        project: {
+          repository: {
+            blobs: {
+              nodes: [
+                { path: 'package.json', rawTextBlob: pkgJson('root') },
+                { path: 'bad/package.json', rawTextBlob: 'not json{{' },
+              ],
+            },
+          },
+        },
+      },
+    });
+    const result = await fetchPackageJsonsBatched(repo, 'main', [
+      'package.json',
+      'gone/package.json', // absent from nodes
+      'bad/package.json', // invalid JSON
+    ]);
+    expect(result.files).toHaveLength(1);
+    expect(result.failedCount).toBe(2);
+  });
+
+  it('throws on GraphQL errors so the caller can fall back to REST', async () => {
+    graphqlMock.mockResolvedValueOnce({ errors: [{ message: 'Field blobs doesn\'t exist' }] });
+    await expect(fetchPackageJsonsBatched(repo, 'main', ['package.json'])).rejects.toThrow(
+      /blobs/i,
+    );
   });
 });

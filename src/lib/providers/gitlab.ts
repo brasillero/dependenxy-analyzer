@@ -1,6 +1,8 @@
 import type { RepoConfig } from '@/lib/types';
 import type { GitProvider, PagedGet, ParsedRepoUrl, ProxyClient } from './provider';
 import { isExcludedPath, parsePackageJson } from '@/lib/package-json';
+import { postGraphql } from '@/lib/proxy-client';
+import type { PackageFilesResult } from '@/lib/package-files';
 
 const MAX_BRANCHES = 500;
 const MAX_PAGES = Math.ceil(MAX_BRANCHES / 100);
@@ -99,6 +101,76 @@ export function filterPackageJsonPaths(entries: GitLabTreeEntry[]): string[] {
     .filter((entry) => entry.type === 'blob' && entry.path.endsWith('package.json'))
     .map((entry) => entry.path)
     .filter((path) => !isExcludedPath(path));
+}
+
+const BLOB_BATCH_SIZE = 50;
+
+interface GraphqlBlobsResponse {
+  data?: {
+    project?: {
+      repository?: {
+        blobs?: { nodes: Array<{ path: string; rawTextBlob: string | null }> };
+      };
+    };
+  };
+  errors?: Array<{ message: string }>;
+}
+
+const BLOBS_QUERY = `
+  query ($fullPath: ID!, $ref: String!, $paths: [String!]!) {
+    project(fullPath: $fullPath) {
+      repository {
+        blobs(paths: $paths, ref: $ref) {
+          nodes { path rawTextBlob }
+        }
+      }
+    }
+  }
+`;
+
+/**
+ * Batch-read package.json files via GraphQL blobs(paths:) — one request per
+ * BLOB_BATCH_SIZE files instead of one REST call per file, which dominates
+ * fetch time on monorepos. Throws on transport/GraphQL failure so the caller
+ * can fall back to per-file REST (older GitLab versions lack this field).
+ */
+export async function fetchPackageJsonsBatched(
+  repo: RepoConfig,
+  branch: string,
+  paths: string[],
+): Promise<PackageFilesResult> {
+  const files: PackageFilesResult['files'] = [];
+  let failedCount = 0;
+
+  for (let start = 0; start < paths.length; start += BLOB_BATCH_SIZE) {
+    const chunk = paths.slice(start, start + BLOB_BATCH_SIZE);
+    const response = await postGraphql<GraphqlBlobsResponse>(repo, {
+      query: BLOBS_QUERY,
+      variables: { fullPath: repo.path, ref: branch, paths: chunk },
+    });
+    if (response.errors?.length) {
+      throw new Error(`GraphQL blobs query failed: ${response.errors[0].message}`);
+    }
+    const nodes = response.data?.project?.repository?.blobs?.nodes;
+    if (!nodes) {
+      throw new Error('GraphQL blobs query returned no repository data.');
+    }
+    const byPath = new Map(nodes.map((node) => [node.path, node.rawTextBlob]));
+    for (const path of chunk) {
+      const raw = byPath.get(path);
+      if (raw == null) {
+        failedCount += 1;
+        continue;
+      }
+      try {
+        files.push(parsePackageJson(path, raw));
+      } catch {
+        failedCount += 1;
+      }
+    }
+  }
+
+  return { files, failedCount };
 }
 
 /** Paginated recursive-tree listing (GitLab trees paginate instead of truncating). */

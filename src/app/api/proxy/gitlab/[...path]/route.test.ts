@@ -1,9 +1,17 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { NextRequest } from 'next/server';
-import { GET } from './route';
+import { GET, POST } from './route';
 
 function req(url: string, headers: Record<string, string> = {}) {
   return new NextRequest(new URL(url, 'http://localhost:3000'), { headers });
+}
+
+function postReq(url: string, body: string, headers: Record<string, string> = {}) {
+  return new NextRequest(new URL(url, 'http://localhost:3000'), {
+    method: 'POST',
+    body,
+    headers: { 'content-type': 'application/json', ...headers },
+  });
 }
 
 const fetchMock = vi.fn();
@@ -98,5 +106,43 @@ describe('gitlab proxy route', () => {
     expect(res.status).toBe(302);
     expect(res.headers.get('location')).toBeNull();
     expect(res.headers.get('set-cookie')).toBeNull();
+  });
+});
+
+describe('gitlab proxy route POST (graphql)', () => {
+  it('forwards the body to /api/graphql (outside /api/v4) with the token', async () => {
+    fetchMock.mockResolvedValue(new Response('{"data":{}}', { status: 200 }));
+    await POST(
+      postReq('/api/proxy/gitlab/graphql', '{"query":"{}"}', {
+        'x-access-token': 'glpat',
+        'x-gitlab-host': 'https://gitlab.weg.net',
+      }),
+    );
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('https://gitlab.weg.net/api/graphql');
+    expect(init.method).toBe('POST');
+    expect(init.headers['PRIVATE-TOKEN']).toBe('glpat');
+    expect(init.redirect).toBe('manual');
+    expect(init.body).toBe('{"query":"{}"}');
+  });
+
+  it('rejects POST to non-graphql paths with 404', async () => {
+    const res = await POST(postReq('/api/proxy/gitlab/projects/x', '{}'));
+    expect(res.status).toBe(404);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects SSRF targets before dispatching', async () => {
+    const res = await POST(
+      postReq('/api/proxy/gitlab/graphql', '{}', { 'x-gitlab-host': 'http://169.254.169.254' }),
+    );
+    expect(res.status).toBe(400);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('returns 502 when the upstream is unreachable', async () => {
+    fetchMock.mockRejectedValue(new Error('down'));
+    const res = await POST(postReq('/api/proxy/gitlab/graphql', '{}'));
+    expect(res.status).toBe(502);
   });
 });
