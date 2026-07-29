@@ -62,7 +62,11 @@ export function OnboardingCard() {
         <CardTitle>Get started</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        <Step n={1} done={hasCredentials} action={!hasCredentials && <TokenDialog label="Add tokens" />}>
+        <Step
+          n={1}
+          done={hasCredentials}
+          action={<TokenDialog label={hasCredentials ? 'Edit tokens' : 'Add tokens'} />}
+        >
           Set your credentials
         </Step>
         <Step
