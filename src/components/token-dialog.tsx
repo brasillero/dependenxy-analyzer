@@ -34,6 +34,34 @@ export function TokenDialog({
 
   const hasCredentials = githubToken !== '' || Object.keys(gitlabTokens).length > 0;
 
+  // Draft edits: typing must NOT touch the store (each keystroke would
+  // re-trigger the automatic analysis). Drafts sync from the store when the
+  // dialog opens and are committed only via Apply.
+  const [draftGithub, setDraftGithub] = useState(githubToken);
+  const [draftGitlab, setDraftGitlab] = useState<Record<string, string>>(gitlabTokens);
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
+    if (open) {
+      setDraftGithub(useTokenStore.getState().githubToken);
+      setDraftGitlab(useTokenStore.getState().gitlabTokens);
+    }
+  }
+
+  const handleApply = () => {
+    setGithubToken(draftGithub.trim());
+    // Remove hosts whose draft was emptied; write the rest.
+    for (const host of Object.keys(useTokenStore.getState().gitlabTokens)) {
+      if (!(host in draftGitlab) || draftGitlab[host].trim() === '') {
+        setGitlabToken(host, '');
+      }
+    }
+    for (const [host, token] of Object.entries(draftGitlab)) {
+      setGitlabToken(host, token.trim());
+    }
+    setOpen(false);
+  };
+
   // gitlab.com is always present; self-hosted hosts appear as repos are added,
   // plus any host the user registers manually below (needed because adding a
   // repo requires its host's token first — chicken-and-egg otherwise).
@@ -95,8 +123,8 @@ export function TokenDialog({
               data-1p-ignore
               data-lpignore="true"
               placeholder="ghp_…"
-              value={githubToken}
-              onChange={(e) => setGithubToken(e.target.value)}
+              value={draftGithub}
+              onChange={(e) => setDraftGithub(e.target.value)}
             />
           </div>
           {gitlabHosts.map((host) => (
@@ -111,8 +139,10 @@ export function TokenDialog({
                 data-1p-ignore
                 data-lpignore="true"
                 placeholder="glpat-…"
-                value={gitlabTokens[host] ?? ''}
-                onChange={(e) => setGitlabToken(host, e.target.value)}
+                value={draftGitlab[host] ?? ''}
+                onChange={(e) =>
+                  setDraftGitlab((prev) => ({ ...prev, [host]: e.target.value }))
+                }
               />
             </div>
           ))}
@@ -138,9 +168,24 @@ export function TokenDialog({
               </Button>
             </div>
           </div>
-          <Button variant="destructive" onClick={clearAll}>
-            Clear all
-          </Button>
+          <div className="flex items-center justify-between gap-2">
+            <Button
+              variant="destructive"
+              onClick={() => {
+                clearAll();
+                setDraftGithub('');
+                setDraftGitlab({});
+              }}
+            >
+              Clear all
+            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleApply}>Apply</Button>
+            </div>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

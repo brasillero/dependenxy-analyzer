@@ -43,16 +43,27 @@ describe('TokenDialog', () => {
     expect(screen.getByLabelText(/gitlab\.acme\.com/i)).toBeInTheDocument();
   });
 
-  it('writes tokens into the memory store via password fields', async () => {
+  it('does not write to the store until Apply is clicked', async () => {
     const user = await openDialog();
     await user.type(screen.getByLabelText(/^github$/i), 'ghp_secret');
+    // Typing alone must not touch the store (each keystroke would re-run analysis):
+    expect(useTokenStore.getState().githubToken).toBe('');
+    await user.click(screen.getByRole('button', { name: /^apply$/i }));
     expect(useTokenStore.getState().githubToken).toBe('ghp_secret');
   });
 
-  it('writes a gitlab host token into the memory store', async () => {
+  it('writes a gitlab host token on Apply', async () => {
     const user = await openDialog();
     await user.type(screen.getByLabelText(/gitlab\.com/i), 'glpat_secret');
+    await user.click(screen.getByRole('button', { name: /^apply$/i }));
     expect(useTokenStore.getState().gitlabTokens['gitlab.com']).toBe('glpat_secret');
+  });
+
+  it('discards edits on Cancel', async () => {
+    const user = await openDialog();
+    await user.type(screen.getByLabelText(/^github$/i), 'ghp_secret');
+    await user.click(screen.getByRole('button', { name: /cancel/i }));
+    expect(useTokenStore.getState().githubToken).toBe('');
   });
 
   it('lets the user register a custom host and set its token', async () => {
@@ -62,6 +73,8 @@ describe('TokenDialog', () => {
     const field = screen.getByLabelText(/gitlab\.weg\.net/i);
     expect(field).toBeInTheDocument();
     await user.type(field, 'glpat_weg');
+    expect(useTokenStore.getState().gitlabTokens['gitlab.weg.net']).toBeUndefined();
+    await user.click(screen.getByRole('button', { name: /^apply$/i }));
     expect(useTokenStore.getState().gitlabTokens['gitlab.weg.net']).toBe('glpat_weg');
   });
 
