@@ -23,7 +23,6 @@ function ReorganizeButton() {
         <TooltipTrigger asChild>
           <Button
             size="sm"
-            variant="secondary"
             className="w-full"
             onClick={() => useViewStore.getState().bumpLayoutVersion()}
             disabled={!analysis}
