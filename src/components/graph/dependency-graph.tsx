@@ -32,7 +32,7 @@ import { useSettingsStore } from '@/stores/settings-store';
 import { useViewStore } from '@/stores/view-store';
 import { SidePanel } from '@/components/panels/side-panel';
 import { OnboardingCard } from '@/components/onboarding-card';
-import { RefreshButton } from '@/components/panels/utility-panel';
+import { UtilityPanel } from '@/components/panels/utility-panel';
 import { AnalysisBanner } from '@/components/analysis-banner';
 import { DependencyEdge } from './dependency-edge';
 import { PackageDetailsDrawer } from './package-details-drawer';
@@ -398,7 +398,7 @@ export function DependencyGraph() {
         <LayoutAnimator baseNodes={baseNodes} setNodes={setNodes} draggingRef={draggingRef} />
         <Panel position="top-right">
           <div className="flex w-64 flex-col gap-2">
-            <RefreshButton />
+            <UtilityPanel />
             <SidePanel
               selectedNodeId={listSelectedNodeId}
               onSelect={handlePanelSelect}

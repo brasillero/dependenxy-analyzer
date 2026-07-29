@@ -9,7 +9,6 @@ import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { AddRepoForm } from '@/components/add-repo-form';
-import { TokenDialog } from '@/components/token-dialog';
 import { PlusIcon, XIcon } from '@/components/icons';
 import { cn, shortName } from '@/lib/utils';
 import { DEP_TYPES, type DepType } from '@/lib/types';
@@ -171,7 +170,6 @@ export function SidePanel({ selectedNodeId, onSelect, sharedOnly, onSharedOnlyCh
               <AddRepoForm onAdded={() => setAddOpen(false)} />
             </DialogContent>
           </Dialog>
-          <TokenDialog size="icon-sm" />
         </div>
       </div>
 
