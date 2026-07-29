@@ -1,6 +1,6 @@
 import type { QueryClient } from '@tanstack/react-query';
 import type { DependencyGroup, RepoConfig } from './types';
-import { fetchPackageJsonFiles, type PackageFilesResult } from './package-files';
+import { fetchPackageJsonFiles, mapWithConcurrency, type PackageFilesResult } from './package-files';
 import { flattenDependencies, groupDependencies, type RepoFiles } from './grouping';
 import { describeError } from './errors';
 import { effectiveBranch } from '@/lib/package-files';
@@ -23,31 +23,31 @@ export interface AnalysisResult {
 const ANALYSIS_STALE_TIME = Infinity;
 
 /**
- * Cross-repo analysis (RF-08). Each repo is read at its effective branch via
- * fetchQuery — with staleTime: Infinity warm cache entries are returned
- * untouched; only an explicit invalidateQueries (manual refresh) makes
- * fetchQuery hit the network. Failures (missing token, 401/404/rate limit,
- * network) are collected per repo and never abort the run.
+ * Cross-repo analysis (RF-08). Repos are fetched in parallel (bounded
+ * concurrency — TanStack Query dedupes concurrent identical keys); each repo
+ * is read at its effective branch via fetchQuery with staleTime: Infinity, so
+ * warm cache entries are returned untouched and only an explicit
+ * invalidateQueries (manual refresh) makes fetchQuery hit the network.
+ * Failures (missing token, 401/404/rate limit, network) are collected per
+ * repo and never abort the run.
  */
 export async function runAnalysis(
   repos: RepoConfig[],
   queryClient: QueryClient,
 ): Promise<AnalysisResult> {
-  const failed: AnalysisFailure[] = [];
-  const perRepo: RepoFiles[] = [];
-
-  for (const repo of repos) {
+  type Outcome = { failure: AnalysisFailure } | { files: RepoFiles };
+  const outcomes = await mapWithConcurrency(repos, 3, async (repo): Promise<Outcome> => {
     const branch = effectiveBranch(repo);
     if (!branch) {
-      failed.push({ repoName: repo.displayName, error: 'No branch selected.' });
-      continue;
+      return { failure: { repoName: repo.displayName, error: 'No branch selected.' } };
     }
     if (useTokenStore.getState().tokenFor(repo) === null) {
-      failed.push({
-        repoName: repo.displayName,
-        error: 'No access token configured for this provider/host — open Access Tokens.',
-      });
-      continue;
+      return {
+        failure: {
+          repoName: repo.displayName,
+          error: 'No access token configured for this provider/host — open Access Tokens.',
+        },
+      };
     }
     try {
       const result = await queryClient.fetchQuery<PackageFilesResult>({
@@ -55,11 +55,13 @@ export async function runAnalysis(
         queryFn: () => fetchPackageJsonFiles(repo, branch),
         staleTime: ANALYSIS_STALE_TIME,
       });
-      perRepo.push({ repo, files: result.files });
+      return { files: { repo, files: result.files } };
     } catch (error) {
-      failed.push({ repoName: repo.displayName, error: describeError(error) });
+      return { failure: { repoName: repo.displayName, error: describeError(error) } };
     }
-  }
+  });
 
+  const failed = outcomes.flatMap((outcome) => ('failure' in outcome ? [outcome.failure] : []));
+  const perRepo = outcomes.flatMap((outcome) => ('files' in outcome ? [outcome.files] : []));
   return { groups: groupDependencies(flattenDependencies(perRepo)), failed };
 }

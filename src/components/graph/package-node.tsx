@@ -1,5 +1,5 @@
 import { Handle, Position, type Node, type NodeProps } from '@xyflow/react';
-import type { CSSProperties } from 'react';
+import { memo, type CSSProperties } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -78,8 +78,10 @@ export function PackageNodeContent({
   );
 }
 
-/** React Flow wrapper — adds the invisible edge handle. */
-export function PackageNode({ data }: NodeProps<PackageFlowNode>) {
+/** React Flow wrapper — adds the invisible edge handle. Memoized: with the
+ *  graph's structural sharing, an unchanged node keeps its data identity and
+ *  skips re-rendering entirely. */
+export const PackageNode = memo(function PackageNode({ data }: NodeProps<PackageFlowNode>) {
   return (
     <>
       {/* Centered so edges appear to attach from any direction; isConnectable={false}
@@ -95,10 +97,10 @@ export function PackageNode({ data }: NodeProps<PackageFlowNode>) {
         data={data}
         onOpenDetails={
           typeof data.onOpenDetails === 'function'
-            ? () => (data.onOpenDetails as () => void)()
+            ? () => (data.onOpenDetails as (data: PackageNodeData) => void)(data)
             : undefined
         }
       />
     </>
   );
-}
+});

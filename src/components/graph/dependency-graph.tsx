@@ -44,6 +44,39 @@ const nodeTypes = { repo: RepoNode, package: PackageNode };
 const edgeTypes = { dependency: DependencyEdge };
 
 const DIMMED_OPACITY = 0.25;
+
+/** Shallow equality over the flat node-data/style records. */
+function shallowEqualRecord(a: object, b: object): boolean {
+  const aKeys = Object.keys(a);
+  const bKeys = Object.keys(b);
+  if (aKeys.length !== bKeys.length) return false;
+  const aRec = a as Record<string, unknown>;
+  const bRec = b as Record<string, unknown>;
+  return aKeys.every((key) => aRec[key] === bRec[key]);
+}
+
+/**
+ * Merge freshly derived nodes into the current canvas state. A node whose
+ * data and style are shallow-equal keeps its previous object identity —
+ * React Flow then skips re-rendering it entirely (measured size, DOM state),
+ * which is the difference between a smooth and a stuttering canvas at
+ * several hundred nodes. Dragged positions and selection always survive.
+ */
+function reconcileNodes(current: Node[], baseNodes: Node[]): Node[] {
+  const currentById = new Map(current.map((node) => [node.id, node]));
+  return baseNodes.map((node) => {
+    const previous = currentById.get(node.id);
+    if (!previous) return node;
+    const sameData = shallowEqualRecord(previous.data, node.data);
+    const sameStyle =
+      previous.style === node.style ||
+      (previous.style !== undefined &&
+        node.style !== undefined &&
+        shallowEqualRecord(previous.style, node.style));
+    if (sameData && sameStyle) return previous;
+    return { ...node, position: previous.position, selected: previous.selected ?? false };
+  });
+}
 // Edges are drawn with the repo accent mixed toward the card surface (opaque
 // color-mix, theme-adaptive) so dense graphs stay readable; a selection
 // restores the full accent on its connected edges.
@@ -184,6 +217,18 @@ export function DependencyGraph() {
 
   const analyzedRepos = useMemo(() => repos, [repos]);
 
+  // Stable detail-openers: node data carries a reference to ONE function per
+  // node type, so the data object can stay shallow-equal across selection
+  // changes (a fresh closure per node per rebuild would defeat memoization).
+  const openRepoDetails = useCallback(
+    (data: RepoNodeData) => setSelectedRepo(data),
+    [],
+  );
+  const openPackageDetails = useCallback(
+    (data: PackageNodeData) => setSelectedPackage(data),
+    [],
+  );
+
   // Analysis is automatic: it (re)runs whenever the repo list or credentials
   // change. The button in the utility panel is only a manual refresh.
   useEffect(() => {
@@ -239,14 +284,14 @@ export function DependencyGraph() {
           position: positions.get(node.id) ?? { x: 0, y: 0 },
           data:
             node.type === 'repo'
-              ? { ...node.data, onOpenDetails: () => setSelectedRepo(node.data as RepoNodeData) }
+              ? { ...node.data, onOpenDetails: openRepoDetails }
               : isShared
-                ? { ...node.data, compact, onOpenDetails: () => setSelectedPackage(node.data as PackageNodeData) }
+                ? { ...node.data, compact, onOpenDetails: openPackageDetails }
                 : { ...node.data, compact, accentColor },
           style: isHighlighted ? undefined : { opacity: DIMMED_OPACITY },
         };
       }),
-    [graphData, positions, highlight, compactNodes, compactMode],
+    [graphData, positions, highlight, compactNodes, compactMode, openRepoDetails, openPackageDetails],
   );
 
   // Canonical controlled pattern: node state owned by useNodesState, changes
@@ -256,11 +301,15 @@ export function DependencyGraph() {
   const [nodes, setNodes, onNodesChangeBase] = useNodesState<Node>([]);
 
   // Re-sync from the derived nodes only when the inputs change (new analysis,
-  // filter toggle, highlight change) — preserving dragged positions and
-  // selection of surviving nodes. Render-time adjustment (no effect needed).
-  // A layoutVersion bump (manual refresh) instead adopts the freshly computed
-  // layout: instantly when animations are off, or via LayoutAnimator gliding
-  // each node from its current spot (d3-timer, so edges follow every frame).
+  // filter toggle, highlight change). Structural sharing: a node whose data
+  // and style are shallow-equal to the previous render keeps its object
+  // identity (and measured DOM state), so React Flow skips re-rendering it —
+  // with hundreds of nodes, a selection change no longer repaints the canvas.
+  // Dragged positions and selection of surviving nodes are preserved.
+  // Render-time adjustment (no effect needed). A layoutVersion bump (manual
+  // refresh) instead adopts the freshly computed layout: instantly when
+  // animations are off, or via LayoutAnimator gliding each node from its
+  // current spot (d3-timer, so edges follow every frame).
   const layoutVersion = useViewStore((s) => s.layoutVersion);
   const [prevLayoutVersion, setPrevLayoutVersion] = useState(layoutVersion);
   const [prevBaseNodes, setPrevBaseNodes] = useState(baseNodes);
@@ -269,29 +318,13 @@ export function DependencyGraph() {
     setPrevBaseNodes(baseNodes);
     if (animateEdges) {
       // Keep current positions; LayoutAnimator interpolates toward baseNodes.
-      setNodes((current) => {
-        const positionsById = new Map(current.map((node) => [node.id, node.position]));
-        const selectedById = new Set(current.filter((node) => node.selected).map((node) => node.id));
-        return baseNodes.map((node) => {
-          const position = positionsById.get(node.id);
-          if (!position) return node;
-          return { ...node, position, selected: selectedById.has(node.id) };
-        });
-      });
+      setNodes((current) => reconcileNodes(current, baseNodes));
     } else {
       setNodes(baseNodes);
     }
   } else if (prevBaseNodes !== baseNodes) {
     setPrevBaseNodes(baseNodes);
-    setNodes((current) => {
-      const positionsById = new Map(current.map((node) => [node.id, node.position]));
-      const selectedById = new Set(current.filter((node) => node.selected).map((node) => node.id));
-      return baseNodes.map((node) => {
-        const position = positionsById.get(node.id);
-        if (!position) return node;
-        return { ...node, position, selected: selectedById.has(node.id) };
-      });
-    });
+    setNodes((current) => reconcileNodes(current, baseNodes));
   }
 
   // Selection is driven by React Flow's native model: the library emits
@@ -380,6 +413,8 @@ export function DependencyGraph() {
         edgeTypes={edgeTypes}
         fitView
         minZoom={0.05}
+        // With hundreds of nodes, only render what's in the viewport.
+        onlyRenderVisibleElements
         // Selection is click-only: with the default (true), pointer-down on a
         // node selects it before drag intent is known, so every drag lit up
         // the highlight state. false keeps dragging selection-free.

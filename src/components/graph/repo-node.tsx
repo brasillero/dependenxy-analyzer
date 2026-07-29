@@ -1,4 +1,5 @@
 import { Handle, Position, type Node, type NodeProps } from '@xyflow/react';
+import { memo } from 'react';
 import { Button } from '@/components/ui/button';
 import { shortName } from '@/lib/utils';
 import type { RepoNodeData } from '@/lib/graph/graph-data';
@@ -42,8 +43,8 @@ export function RepoNodeContent({
   );
 }
 
-/** React Flow wrapper — adds the invisible edge handle. */
-export function RepoNode({ data }: NodeProps<RepoFlowNode>) {
+/** React Flow wrapper — adds the invisible edge handle. Memoized like PackageNode. */
+export const RepoNode = memo(function RepoNode({ data }: NodeProps<RepoFlowNode>) {
   return (
     <>
       {/* Centered so edges appear to attach from any direction; isConnectable={false}
@@ -59,10 +60,10 @@ export function RepoNode({ data }: NodeProps<RepoFlowNode>) {
         data={data}
         onOpenDetails={
           typeof data.onOpenDetails === 'function'
-            ? () => (data.onOpenDetails as () => void)()
+            ? () => (data.onOpenDetails as (data: RepoNodeData) => void)(data)
             : undefined
         }
       />
     </>
   );
-}
+});

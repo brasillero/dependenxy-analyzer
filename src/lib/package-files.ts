@@ -16,7 +16,7 @@ export function effectiveBranch(repo: RepoConfig): string | undefined {
 }
 
 /** Run async tasks over `items` with at most `limit` in flight, preserving order. */
-async function mapWithConcurrency<T, R>(
+export async function mapWithConcurrency<T, R>(
   items: T[],
   limit: number,
   task: (item: T) => Promise<R>,

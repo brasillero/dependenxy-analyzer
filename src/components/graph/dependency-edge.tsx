@@ -5,6 +5,7 @@ import {
   Position,
   type EdgeProps,
 } from '@xyflow/react';
+import { memo } from 'react';
 import { cn } from '@/lib/utils';
 
 export type DependencyEdgeType = 'straight' | 'bezier' | 'smoothstep' | 'step';
@@ -30,7 +31,7 @@ function orientation(dx: number, dy: number): [Position, Position] {
  *
  * `data.edgeType` picks the curve: 'straight' | 'bezier' | 'smoothstep' | 'step'.
  */
-export function DependencyEdge({
+export const DependencyEdge = memo(function DependencyEdge({
   id,
   sourceX,
   sourceY,
@@ -67,4 +68,4 @@ export function DependencyEdge({
       style={style}
     />
   );
-}
+});
