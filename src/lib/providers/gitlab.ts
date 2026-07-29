@@ -1,8 +1,7 @@
 import type { RepoConfig } from '@/lib/types';
 import type { GitProvider, PagedGet, ParsedRepoUrl, ProxyClient } from './provider';
 import { isExcludedPath, parsePackageJson } from '@/lib/package-json';
-import { postGraphql } from '@/lib/proxy-client';
-import type { PackageFilesResult } from '@/lib/package-files';
+import { fetchBranchNamesGraphql, fetchDefaultBranchGraphql } from './gitlab-graphql';
 
 const MAX_BRANCHES = 500;
 const MAX_PAGES = Math.ceil(MAX_BRANCHES / 100);
@@ -14,6 +13,10 @@ interface GitLabProjectPayload {
 
 interface GitLabTreeEntry {
   type: 'blob' | 'tree';
+  path: string;
+}
+
+interface GitLabSearchBlobEntry {
   path: string;
 }
 
@@ -45,41 +48,35 @@ export const gitlabProvider: GitProvider = {
     return { provider: 'gitlab', host: url.host, path: segments.join('/') };
   },
 
+  /** GraphQL rootRef first; REST project payload as the legacy fallback. */
   async getDefaultBranch(client: ProxyClient, repo: RepoConfig): Promise<string> {
-    const payload = await client.getJson<GitLabProjectPayload>(`projects/${projectId(repo)}`);
-    return payload.default_branch;
+    try {
+      return await fetchDefaultBranchGraphql(repo);
+    } catch {
+      const payload = await client.getJson<GitLabProjectPayload>(`projects/${projectId(repo)}`);
+      return payload.default_branch;
+    }
   },
 
-  /** Full pagination via x-next-page header, capped at MAX_BRANCHES (spec §4.6). */
+  /** GraphQL branchNames first; paginated REST branches as the fallback. */
   async listBranches(pagedGet: PagedGet, repo: RepoConfig): Promise<string[]> {
-    const names: string[] = [];
-    let searchParams: Record<string, string> = { per_page: '100' };
-    // The page cap also guards against a misbehaving upstream that keeps
-    // echoing a non-empty x-next-page with an empty body — names.length alone
-    // would never reach MAX_BRANCHES and the loop would spin forever.
-    for (let page = 0; page < MAX_PAGES; page++) {
-      const response = await pagedGet<Array<{ name: string }>>(
-        `projects/${projectId(repo)}/repository/branches`,
-        searchParams,
-      );
-      names.push(...response.data.map((b) => b.name));
-      const next = response.headers.get('x-next-page');
-      if (!next) break;
-      searchParams = { ...searchParams, page: next };
+    try {
+      return await fetchBranchNamesGraphql(repo, MAX_BRANCHES);
+    } catch {
+      return listBranchesRest(pagedGet, repo);
     }
-    return names.slice(0, MAX_BRANCHES);
   },
 
   /**
    * GitLab trees paginate, so a header-less single page would silently
-   * truncate. Fail loudly instead — callers must use the paginated facade
-   * in providers/index.ts.
+   * truncate. Fail loudly instead — callers must use the listPackageJsonPaths
+   * facade in providers/index.ts (blob search with tree fallback).
    */
   async listPackageJsonPaths(client: ProxyClient, repo: RepoConfig, branch: string): Promise<string[]> {
     void client;
     void repo;
     void branch;
-    throw new Error('Use the listPackageJsonPaths facade in providers/index.ts (paginated) for GitLab repos.');
+    throw new Error('Use the listPackageJsonPaths facade in providers/index.ts for GitLab repos.');
   },
 
   async fetchPackageJson(
@@ -96,6 +93,26 @@ export const gitlabProvider: GitProvider = {
   },
 };
 
+/** REST fallback for branch listing: full pagination via x-next-page, capped. */
+async function listBranchesRest(pagedGet: PagedGet, repo: RepoConfig): Promise<string[]> {
+  const names: string[] = [];
+  let searchParams: Record<string, string> = { per_page: '100' };
+  // The page cap also guards against a misbehaving upstream that keeps
+  // echoing a non-empty x-next-page with an empty body — names.length alone
+  // would never reach MAX_BRANCHES and the loop would spin forever.
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const response = await pagedGet<Array<{ name: string }>>(
+      `projects/${projectId(repo)}/repository/branches`,
+      searchParams,
+    );
+    names.push(...response.data.map((b) => b.name));
+    const next = response.headers.get('x-next-page');
+    if (!next) break;
+    searchParams = { ...searchParams, page: next };
+  }
+  return names.slice(0, MAX_BRANCHES);
+}
+
 export function filterPackageJsonPaths(entries: GitLabTreeEntry[]): string[] {
   return entries
     .filter((entry) => entry.type === 'blob' && entry.path.endsWith('package.json'))
@@ -103,77 +120,43 @@ export function filterPackageJsonPaths(entries: GitLabTreeEntry[]): string[] {
     .filter((path) => !isExcludedPath(path));
 }
 
-const BLOB_BATCH_SIZE = 50;
-
-interface GraphqlBlobsResponse {
-  data?: {
-    project?: {
-      repository?: {
-        blobs?: { nodes: Array<{ path: string; rawTextBlob: string | null }> };
-      };
-    };
-  };
-  errors?: Array<{ message: string }>;
-}
-
-const BLOBS_QUERY = `
-  query ($fullPath: ID!, $ref: String!, $paths: [String!]!) {
-    project(fullPath: $fullPath) {
-      repository {
-        blobs(paths: $paths, ref: $ref) {
-          nodes { path rawTextBlob }
-        }
-      }
-    }
-  }
-`;
-
 /**
- * Batch-read package.json files via GraphQL blobs(paths:) — one request per
- * BLOB_BATCH_SIZE files instead of one REST call per file, which dominates
- * fetch time on monorepos. Throws on transport/GraphQL failure so the caller
- * can fall back to per-file REST (older GitLab versions lack this field).
+ * Discovery via the project search API: one request finds every package.json
+ * (the tree listing needs a serial page per 100 tree entries). The same blob
+ * may appear multiple times in results (multiple matches), so paths are
+ * deduped. Throws on request failure so the caller falls back to the tree.
  */
-export async function fetchPackageJsonsBatched(
+export async function listPackageJsonPathsViaSearch(
+  pagedGet: PagedGet,
   repo: RepoConfig,
   branch: string,
-  paths: string[],
-): Promise<PackageFilesResult> {
-  const files: PackageFilesResult['files'] = [];
-  let failedCount = 0;
-
-  for (let start = 0; start < paths.length; start += BLOB_BATCH_SIZE) {
-    const chunk = paths.slice(start, start + BLOB_BATCH_SIZE);
-    const response = await postGraphql<GraphqlBlobsResponse>(repo, {
-      query: BLOBS_QUERY,
-      variables: { fullPath: repo.path, ref: branch, paths: chunk },
-    });
-    if (response.errors?.length) {
-      throw new Error(`GraphQL blobs query failed: ${response.errors[0].message}`);
-    }
-    const nodes = response.data?.project?.repository?.blobs?.nodes;
-    if (!nodes) {
-      throw new Error('GraphQL blobs query returned no repository data.');
-    }
-    const byPath = new Map(nodes.map((node) => [node.path, node.rawTextBlob]));
-    for (const path of chunk) {
-      const raw = byPath.get(path);
-      if (raw == null) {
-        failedCount += 1;
-        continue;
-      }
-      try {
-        files.push(parsePackageJson(path, raw));
-      } catch {
-        failedCount += 1;
+): Promise<string[]> {
+  const paths = new Set<string>();
+  let searchParams: Record<string, string> = {
+    scope: 'blobs',
+    search: 'filename:package.json',
+    ref: branch,
+    per_page: '100',
+  };
+  for (let page = 0; page < MAX_TREE_PAGES; page++) {
+    const response = await pagedGet<GitLabSearchBlobEntry[]>(
+      `projects/${projectId(repo)}/search`,
+      searchParams,
+    );
+    for (const entry of response.data) {
+      if (entry.path.endsWith('package.json') && !isExcludedPath(entry.path)) {
+        paths.add(entry.path);
       }
     }
+    const next = response.headers.get('x-next-page');
+    if (!next) break;
+    searchParams = { ...searchParams, page: next };
   }
-
-  return { files, failedCount };
+  return [...paths];
 }
 
-/** Paginated recursive-tree listing (GitLab trees paginate instead of truncating). */
+/** Fallback discovery: paginated recursive-tree listing (GitLab trees paginate
+ *  instead of truncating). */
 export async function listPackageJsonPathsPaginated(
   pagedGet: PagedGet,
   repo: RepoConfig,

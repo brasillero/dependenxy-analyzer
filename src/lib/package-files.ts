@@ -1,7 +1,7 @@
 import type { PackageJsonFile, RepoConfig } from './types';
 import { createProxyClient, getJsonWithHeaders } from './proxy-client';
 import { getProvider, listPackageJsonPaths } from './providers';
-import { fetchPackageJsonsBatched } from './providers/gitlab';
+import { fetchPackageJsonsBatched } from './providers/gitlab-graphql';
 
 export interface PackageFilesResult {
   files: PackageJsonFile[];

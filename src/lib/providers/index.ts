@@ -1,7 +1,11 @@
 import type { RepoConfig } from '@/lib/types';
 import type { PagedGet, ProxyClient } from './provider';
 import { githubProvider } from './github';
-import { gitlabProvider, listPackageJsonPathsPaginated } from './gitlab';
+import {
+  gitlabProvider,
+  listPackageJsonPathsPaginated,
+  listPackageJsonPathsViaSearch,
+} from './gitlab';
 
 export function getProvider(repo: RepoConfig) {
   return repo.provider === 'github' ? githubProvider : gitlabProvider;
@@ -12,7 +16,11 @@ export function listBranches(repo: RepoConfig, pagedGet: PagedGet): Promise<stri
   return getProvider(repo).listBranches(pagedGet, repo);
 }
 
-/** Paginated package.json path listing (GitHub tree is single-call, GitLab paginates). */
+/**
+ * package.json discovery. GitHub's tree is a single recursive call. GitLab
+ * uses the project search API (one request finds every package.json); if the
+ * instance's search is unavailable it falls back to the paginated tree.
+ */
 export async function listPackageJsonPaths(
   repo: RepoConfig,
   branch: string,
@@ -22,5 +30,9 @@ export async function listPackageJsonPaths(
   if (repo.provider === 'github') {
     return githubProvider.listPackageJsonPaths(client, repo, branch);
   }
-  return listPackageJsonPathsPaginated(pagedGet, repo, branch);
+  try {
+    return await listPackageJsonPathsViaSearch(pagedGet, repo, branch);
+  } catch {
+    return listPackageJsonPathsPaginated(pagedGet, repo, branch);
+  }
 }
