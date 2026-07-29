@@ -392,20 +392,24 @@ export function DependencyGraph() {
         onSelectionDragStop={handleDragStop}
       >
         <Background />
-        <Controls />
+        {analysis && <Controls />}
         <FitOnDataChange />
         <FitOnSelection nodeIds={highlight ? highlight.nodeIds : null} draggingRef={draggingRef} />
         <LayoutAnimator baseNodes={baseNodes} setNodes={setNodes} draggingRef={draggingRef} />
         <Panel position="top-right">
-          <div className="flex w-64 flex-col gap-2">
-            <UtilityPanel />
-            <SidePanel
-              selectedNodeId={listSelectedNodeId}
-              onSelect={handlePanelSelect}
-              sharedOnly={sharedOnly}
-              onSharedOnlyChange={setSharedOnly}
-            />
-          </div>
+          {/* Until the first analysis exists the onboarding card owns the
+              screen — the utility/side panels stay hidden. */}
+          {analysis && (
+            <div className="flex w-64 flex-col gap-2">
+              <UtilityPanel />
+              <SidePanel
+                selectedNodeId={listSelectedNodeId}
+                onSelect={handlePanelSelect}
+                sharedOnly={sharedOnly}
+                onSharedOnlyChange={setSharedOnly}
+              />
+            </div>
+          )}
         </Panel>
         <AnalysisBanner />
       </ReactFlow>
